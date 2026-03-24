@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>구글시트 DB — 라디오 필터(오늘 기준) & 페이징 (GVIZ JSONP)</title>
+  <style>
+    /* reset___ */
+    * {padding: 0; margin: 0; box-sizing: border-box; outline: none;}
+    a {text-decoration: none;}
+    ul, ol, li {list-style: none;}
+    input[type="checkbox"],
+    input[type="radio"] {appearance: none; outline: none;}
+    input[type="color"] {-webkit-appearance: none; -moz-appearance: none; appearance: none; background-color: transparent; border: none; padding: 0;}
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+      -webkit-appearance: none; /* 화살표 제거 */
+      margin: 0; /* 마진 제거 */
+    }
+    textarea {resize: none; border: none; outline: none; padding: 0; background-color: transparent;}
+    button {cursor: pointer; background: none; border: none;}
+    table {border-collapse: collapse; border-spacing: 0;}
+    /* ___reset */
+    /* common___ */
+    input[type="radio"] {display: none;}
+    input[type="radio"] ~ label { border: 1px solid #CCC; border-radius: 4px; }
+    /* input[type="radio"]:checked ~ label { background: salmon; color: #FFF; border-color: tomato;} */
+    /* __common */
+
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Arial; padding: 20px; max-width: 920px; margin: auto; }
+    h1 { margin-top: 0; }
+    .top, .middle, .bottom { margin-bottom: 24px; }
+    label, select, button { padding: 6px 8px; margin-right: 8px; }
+    .filters { display:flex; gap:12px; align-items:center; margin-top:8px; flex-wrap:wrap; }
+    .filter-group { display:flex; gap:6px; align-items:center; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background: #f4f4f4; }
+    .pager { margin-top: 8px; display: flex; gap:8px; align-items: center; flex-wrap:wrap; }
+    .pager button { padding: 6px 10px; }
+    .small { font-size: 0.9em; color: #555; }
+    #loading { color: #06c; }
+    #error { color: #c00; }
+    .meta { font-size: 0.9em; color:#666; margin-top:6px; }
+  </style>
+</head>
+<body>
+  <h1>구글시트 DB — 라디오 필터(오늘 기준) & 페이지네이션</h1>
+
+  <div class="top">
+    <!-- <div class="meta">
+      소스 스프레드시트: <strong>https://docs.google.com/spreadsheets/d/1-ILVOg2DyAmnuE127iSaUnnDcmbrpjjgcoRTs0vOTf0</strong>
+      (시트 탭: <strong>시트2</strong>)
+    </div> -->
+
+    <div class="filters" aria-label="필터 옵션">
+      <div class="filter-group" role="radiogroup" aria-label="기간 필터">
+        <input type="radio" id="filter_all" name="periodFilter" value="all">
+        <label for="filter_all">전체</label>
+
+        <input type="radio" id="filter_this_month" name="periodFilter" value="thisMonth" checked>
+        <label for="filter_this_month">이번달 데이터</label>
+
+        <input type="radio" id="filter_from_today" name="periodFilter" value="fromToday">
+        <label for="filter_from_today">오늘부터 이후(포함)</label>
+
+        <input type="radio" id="filter_next_year" name="periodFilter" value="nextYear">
+        <label for="filter_next_year">내년 데이터</label>
+      </div>
+
+      <div class="filter-group">
+        <button id="clearFilterBtn">필터 초기화(전체)</button>
+        <button id="reloadBtn">새로고침</button>
+        <span id="loading" style="display:none">로딩중...</span>
+        <span id="error" style="display:none"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="middle">
+    <h2>필터링 결과</h2>
+    <div id="filteredResults">필터를 선택하면 결과가 표시됩니다.</div>
+  </div>
+
+  <div class="bottom">
+    <h2>전체 데이터 (페이지네이션)</h2>
+    <div style="margin-bottom:6px;">
+      페이지당 항목:
+      <select id="pageSizeSelect">
+        <option value="5">5</option>
+        <option value="10" selected>10</option>
+        <option value="20">20</option>
+        <option value="50">50</option>
+      </select>
+    </div>
+    <div id="allDataContainer"></div>
+  </div>
+
+<script>
+/*
+  GVIZ JSONP + 라디오 기반 기간 필터 (오늘 기준)
+  - SPREADSHEET_ID, GID, SHEET_NAME 하드코딩 (사용자 제공값)
+  - google.visualization.Query.setResponse(...) 를 이용한 JSONP 방식으로 CORS 우회
+  - 날짜는 내부적으로 "YYYY-MM-DD" 형식으로 표준화하여 비교/필터 처리
+  - 필터 옵션:
+      - 전체 (default)
+      - 이번달 데이터 (오늘이 속한 월의 데이터)
+      - 오늘부터 이후(포함) (today <= date)
+      - 내년 데이터 (date.year == today.year + 1)
+*/
+// test
+const SPREADSHEET_ID = '1-ILVOg2DyAmnuE127iSaUnnDcmbrpjjgcoRTs0vOTf0';
+const GID = '1359756202';
+const SHEET_NAME = '시트2';
+const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?gid=${GID}&sheet=${encodeURIComponent(SHEET_NAME)}&tqx=out:json`;
+
+// song
+// const SPREADSHEET_ID = '1GjojYCpBzP-Q6klrKlxReVZE2UmaRH4x0M0T0xxvg6M';
+// const GID = '593230487';
+// const SHEET_NAME = '오카리나';
+// const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?gid=${GID}&sheet=${encodeURIComponent(SHEET_NAME)}&tqx=out:json`;
+
+const HAS_HEADER = true;
+
+let allRows = []; // [{date: "YYYY-MM-DD", value1, value2}, ...]
+let currentPage = 1;
+let pageSize = 10;
+
+// DOM
+const filteredResults = document.getElementById('filteredResults');
+const allDataContainer = document.getElementById('allDataContainer');
+const loadingEl = document.getElementById('loading');
+const errorEl = document.getElementById('error');
+const clearFilterBtn = document.getElementById('clearFilterBtn');
+const pageSizeSelect = document.getElementById('pageSizeSelect');
+const reloadBtn = document.getElementById('reloadBtn');
+const periodRadios = document.querySelectorAll('input[name="periodFilter"]');
+
+function showLoading(show=true) { loadingEl.style.display = show ? 'inline' : 'none'; }
+function showError(msg) { errorEl.style.display = msg ? 'inline' : 'none'; errorEl.textContent = msg || ''; }
+
+function pad(n){ return n < 10 ? '0' + n : String(n); }
+
+// formatCellDate: gviz에서 받은 cell.v (Date 객체 또는 Date(...) literal 등)을 "YYYY-MM-DD"로 변환
+function formatCellDate(cellValue) {
+  try {
+    if (cellValue instanceof Date) {
+      const y = cellValue.getFullYear();
+      const m = cellValue.getMonth() + 1;
+      const d = cellValue.getDate();
+      return `${y}-${pad(m)}-${pad(d)}`;
+    }
+  } catch(e){ /* ignore */ }
+
+  if (typeof cellValue === 'string') {
+    // gviz literal: "Date(2026, 1, 2)" -> month is 0-based
+    const m = cellValue.match(/Date\(\s*(\d{4})\s*,\s*(\d{1,2})\s*,\s*(\d{1,2})/);
+    if (m) {
+      const y = parseInt(m[1], 10);
+      const monthIndex = parseInt(m[2], 10);
+      const d = parseInt(m[3], 10);
+      return `${y}-${pad(monthIndex + 1)}-${pad(d)}`;
+    }
+    // already like "YYYY-MM-DD" or "YYYY.M.D" or "YYYY/M/D" etc.
+    // try common separators
+    const sepMatch = cellValue.trim().match(/^(\d{4})\D+(\d{1,2})\D+(\d{1,2})$/);
+    if (sepMatch) {
+      const y = parseInt(sepMatch[1], 10);
+      const m2 = parseInt(sepMatch[2], 10);
+      const d2 = parseInt(sepMatch[3], 10);
+      return `${y}-${pad(m2)}-${pad(d2)}`;
+    }
+  }
+
+  if (typeof cellValue === 'number') {
+    // Not handling spreadsheet serials here; return as string
+    return String(cellValue);
+  }
+
+  return String(cellValue === null || cellValue === undefined ? '' : cellValue);
+}
+
+// parseDateFromString: "YYYY-MM-DD" (or similar) -> Date (local midnight). 반환 null이면 유효한 날짜 아님
+function parseDateFromString(s) {
+  if (!s) return null;
+  const t = String(s).trim();
+  // match YYYY-MM-DD or YYYY/M/D or YYYY.M.D or YYYY M D
+  const m = t.match(/^(\d{4})\D+(\d{1,2})\D+(\d{1,2})$/);
+  if (m) {
+    const y = parseInt(m[1], 10);
+    const mm = parseInt(m[2], 10);
+    const dd = parseInt(m[3], 10);
+    if (mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31) {
+      return new Date(y, mm - 1, dd); // local midnight
+    }
+    return null;
+  }
+  // fallback: try Date.parse but avoid timezone shifts - try to create Date from parts if possible
+  const alt = Date.parse(t);
+  if (!isNaN(alt)) {
+    const d = new Date(alt);
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+  return null;
+}
+
+// JSONP 로드: google.visualization.Query.setResponse 으로 응답 받음
+function loadSheetGvizJsonp(timeoutMs = 10000) {
+  showError('');
+  showLoading(true);
+
+  let script = null;
+  let timedOut = false;
+  let finished = false;
+
+  window.google = window.google || {};
+  window.google.visualization = window.google.visualization || {};
+  const originalSetResponse = window.google.visualization.Query && window.google.visualization.Query.setResponse;
+
+  window.google.visualization.Query = window.google.visualization.Query || {};
+  window.google.visualization.Query.setResponse = function(parsed) {
+    if (finished || timedOut) return;
+    finished = true;
+    cleanup();
+    try {
+      const table = parsed.table;
+      if (!table || !table.rows) throw new Error('테이블 데이터가 없습니다.');
+      const values = table.rows.map(r => {
+        const cells = (r.c || []).map(cell => {
+          if (!cell) return '';
+          return formatCellDate(cell.v);
+        });
+        return cells;
+      });
+      processValues(values);
+    } catch (err) {
+      showError('응답 처리 실패: ' + err.message);
+      console.error(err);
+    } finally {
+      showLoading(false);
+    }
+  };
+
+  script = document.createElement('script');
+  script.src = GVIZ_URL;
+  script.async = true;
+  script.onerror = function() {
+    if (finished || timedOut) return;
+    finished = true;
+    cleanup();
+    showError('스크립트 로드 실패(권한/네트워크 문제).');
+    showLoading(false);
+  };
+
+  const toId = setTimeout(() => {
+    if (finished) return;
+    timedOut = true;
+    cleanup();
+    showError('요청 타임아웃');
+    showLoading(false);
+  }, timeoutMs);
+
+  function cleanup() {
+    try { if (script && script.parentNode) script.parentNode.removeChild(script); } catch(e){}
+    clearTimeout(toId);
+    try {
+      if (originalSetResponse) {
+        window.google.visualization.Query.setResponse = originalSetResponse;
+      } else {
+        try { delete window.google.visualization.Query.setResponse; } catch(e){ window.google.visualization.Query.setResponse = undefined; }
+      }
+    } catch(e){
+      console.warn('cleanup error', e);
+    }
+  }
+
+  document.head.appendChild(script);
+}
+
+function processValues(values) {
+  let rows = values.slice();
+  if (HAS_HEADER && rows.length > 0) rows = rows.slice(1);
+
+  allRows = rows.map(r => ({
+    date: r[0] !== undefined ? String(r[0]).trim() : '',
+    value1: r[1] !== undefined ? String(r[1]).trim() : '',
+    value2: r[2] !== undefined ? String(r[2]).trim() : ''
+  }));
+
+  // 초기 렌더: 전체(페이지네이션)와 현재 선택된 라디오에 따른 필터 표시
+  renderAllDataPage(1);
+  renderFilteredResults();
+}
+
+function getSelectedFilter() {
+  const sel = document.querySelector('input[name="periodFilter"]:checked');
+  return sel ? sel.value : 'all';
+}
+
+function renderFilteredResults() {
+  const filter = getSelectedFilter();
+  const todayRaw = new Date();
+  const today = new Date(todayRaw.getFullYear(), todayRaw.getMonth(), todayRaw.getDate()); // local midnight
+  const thisYear = today.getFullYear();
+  const thisMonth = today.getMonth(); // 0-based
+
+  let matched = [];
+  if (filter === 'all') {
+    // show all rows (including those without valid dates)
+    matched = allRows.slice();
+  } else {
+    matched = allRows.filter(row => {
+      const ds = row.date;
+      const dt = parseDateFromString(ds);
+      if (!dt) return false;
+      if (filter === 'thisMonth') {
+        return dt.getFullYear() === thisYear && dt.getMonth() === thisMonth;
+      } else if (filter === 'fromToday') {
+        // include today && this year end
+        return dt.getTime() >= today.getTime() && dt.getFullYear() === thisYear;
+      } else if (filter === 'nextYear') {
+        return dt.getFullYear() === (thisYear + 1);
+      }
+      return false;
+    });
+  }
+
+  // render results
+  if (!matched || matched.length === 0) {
+    filteredResults.innerHTML = `<div class="small">선택된 필터("${escapeHtml(filter)}")에 해당하는 결과가 없습니다.</div>`;
+    return;
+  }
+
+  const tbl = document.createElement('table');
+  const thead = document.createElement('thead');
+  thead.innerHTML = `<tr><th>#</th><th>날짜</th><th>값1</th><th>값2</th></tr>`;
+  tbl.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  matched.forEach((row, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${i + 1}</td><td>${escapeHtml(row.date)}</td><td>${escapeHtml(row.value1)}</td><td>${escapeHtml(row.value2)}</td>`;
+    tbody.appendChild(tr);
+  });
+  tbl.appendChild(tbody);
+
+  filteredResults.innerHTML = `<div class="small">필터: ${escapeHtml(filter)} — 결과 ${matched.length}건</div>`;
+  filteredResults.appendChild(tbl);
+}
+
+function renderAllDataPage(page) {
+  currentPage = Math.max(1, page || 1);
+  pageSize = parseInt(pageSizeSelect.value, 10) || 10;
+  const total = allRows.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  if (currentPage > totalPages) currentPage = totalPages;
+
+  const startIdx = (currentPage - 1) * pageSize;
+  const pageRows = allRows.slice(startIdx, startIdx + pageSize);
+
+  const tbl = document.createElement('table');
+  const thead = document.createElement('thead');
+  thead.innerHTML = `<tr><th>#</th><th>날짜</th><th>값1</th><th>값2</th></tr>`;
+  tbl.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  pageRows.forEach((row, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${startIdx + i + 1}</td><td>${escapeHtml(row.date)}</td><td>${escapeHtml(row.value1)}</td><td>${escapeHtml(row.value2)}</td>`;
+    tbody.appendChild(tr);
+  });
+  tbl.appendChild(tbody);
+
+  const pager = document.createElement('div');
+  pager.className = 'pager';
+  const info = document.createElement('span');
+  info.className = 'small';
+  info.textContent = `총 ${total}개 항목 — ${currentPage} / ${totalPages} 페이지`;
+  pager.appendChild(info);
+
+  const firstBtn = document.createElement('button');
+  firstBtn.textContent = '<<';
+  firstBtn.disabled = currentPage === 1;
+  firstBtn.addEventListener('click', () => renderAllDataPage(1));
+  pager.appendChild(firstBtn);
+
+  const prevBtn = document.createElement('button');
+  prevBtn.textContent = '<';
+  prevBtn.disabled = currentPage === 1;
+  prevBtn.addEventListener('click', () => renderAllDataPage(currentPage - 1));
+  pager.appendChild(prevBtn);
+
+  const nextBtn = document.createElement('button');
+  nextBtn.textContent = '>';
+  nextBtn.disabled = currentPage === totalPages;
+  nextBtn.addEventListener('click', () => renderAllDataPage(currentPage + 1));
+  pager.appendChild(nextBtn);
+
+  const lastBtn = document.createElement('button');
+  lastBtn.textContent = '>>';
+  lastBtn.disabled = currentPage === totalPages;
+  lastBtn.addEventListener('click', () => renderAllDataPage(totalPages));
+  pager.appendChild(lastBtn);
+
+  allDataContainer.innerHTML = '';
+  allDataContainer.appendChild(tbl);
+  allDataContainer.appendChild(pager);
+}
+
+function escapeHtml(s) {
+  if (s === null || s === undefined) return '';
+  return String(s)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+// 이벤트
+periodRadios.forEach(r => r.addEventListener('change', () => renderFilteredResults()));
+clearFilterBtn.addEventListener('click', () => {
+  document.getElementById('filter_all').checked = true;
+  renderFilteredResults();
+});
+pageSizeSelect.addEventListener('change', () => renderAllDataPage(1));
+reloadBtn.addEventListener('click', () => loadSheetGvizJsonp());
+
+// 초기 로드
+loadSheetGvizJsonp();
+</script>
+</body>
+</html>
