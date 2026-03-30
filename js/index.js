@@ -7,8 +7,11 @@ function formatKoreanDate(date) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  const todayEl = document.getElementById("today-date");
   const today = new Date();
+  
+  // 오늘 날짜
+  document.getElementById("today-date").textContent = formatKoreanDate(today);
 
-  todayEl.textContent = formatKoreanDate(today);
+  // 현재 월
+  document.getElementById("this-month").textContent = `${today.getMonth() + 1}월`;
 });
