@@ -55,6 +55,47 @@ section {
   margin-bottom: 16px;
 }
 
+/* 공통 아이콘 */
+.triangle-left,
+.triangle-right {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #e3e9ed;
+  position: relative;
+  cursor: pointer;
+}
+
+/* 삼각형 공통 */
+.triangle-left::before,
+.triangle-right::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-style: solid;
+}
+
+/* 왼쪽 (◀) */
+.triangle-left::before {
+  border-width: 6px 8px 6px 0;
+  border-color: transparent #2c3437 transparent transparent;
+}
+
+/* 오른쪽 (▶) */
+.triangle-right::before {
+  border-width: 6px 0 6px 8px;
+  border-color: transparent transparent transparent #2c3437;
+}
+
+/* hover (선택) */
+.triangle-left:hover,
+.triangle-right:hover {
+  background: #d4dbdf;
+}
+
 /* 카드 */
 .card-list {
   display: flex;
