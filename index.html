@@ -1,11 +1,82 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Hellow World!</title>
-  </head>
-  <body>
-      <div>Hellow World!</div>
-  </body>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+
+  <link rel="stylesheet" href="css/index.css"/>
+</head>
+
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <span class="material-symbols-outlined icon">music_note</span>
+    <h1>My Songs</h1>
+  </div>
+  <button class="icon-btn">
+    <span class="material-symbols-outlined">search</span>
+  </button>
+</header>
+
+<main class="container">
+
+  <!-- 이번 달 -->
+  <section>
+    <div class="section-header">
+      <h2>이번 달</h2>
+      <span>2026년 3월 23일</span>
+    </div>
+
+    <div class="card-list">
+      <div class="song-card">
+        <div>
+          <div class="meta">
+            <span class="date">3월 12일</span>
+            <span class="badge">발라드</span>
+          </div>
+          <h3>잊혀진 계절</h3>
+        </div>
+        <span class="key">C#</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 전체 -->
+  <section class="all-section">
+    <h2>전체</h2>
+
+    <div class="tabs">
+      <button class="active">올해</button>
+      <button>전체</button>
+      <button>2026년</button>
+      <button>2025년</button>
+    </div>
+
+    <div class="table-list">
+      <div class="row">
+        <div class="col-left">
+          <p class="date">02월 28일</p>
+          <p class="genre">발라드</p>
+        </div>
+        <div class="col-center">그때 그 사람</div>
+        <div class="col-right">Am</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<nav class="bottom-nav">
+  <button>Monthly</button>
+  <button class="active">All Songs</button>
+  <button>Settings</button>
+</nav>
+
+<script src="script.js"></script>
+</body>
 </html>
