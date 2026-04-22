@@ -25,7 +25,15 @@ function updateMonthDisplay() {
 
   // 이전/다음 버튼 활성화 여부
   const today = new Date();
-  document.getElementById("prev-month").disabled = currentDate.getFullYear() < today.getFullYear() || (currentDate.getFullYear() === today.getFullYear() && currentDate.getMonth() < today.getMonth());
+  
+  // 이전 버튼: 1월까지만 이동 가능
+  document.getElementById("prev-month").disabled = 
+    currentDate.getFullYear() < today.getFullYear() || 
+    (currentDate.getFullYear() === today.getFullYear() && currentDate.getMonth() < 0);
+  
+  // 다음 버튼: 현재월 +1까지만 이동 가능
+  const nextLimit = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+  document.getElementById("next-month").disabled = currentDate >= nextLimit;
 }
 
 // Date 객체를 YYYY-MM-DD 문자열로 변환
