@@ -202,6 +202,9 @@ function displaySchedule(data) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  const now = new Date();
+  const cutoffTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 15, 0, 0); // 오늘 오후 3시
+
   if (data.length === 0) {
     container.innerHTML = '<div class="empty">이 달의 일정이 없습니다.</div>';
     return;
@@ -210,6 +213,7 @@ function displaySchedule(data) {
   container.innerHTML = data
     .map((item) => {
       const isToday = item.date.getTime() === today.getTime();
+      const isPast = item.date < cutoffTime; // 오늘 오후 3시 이전인지 확인
       const dateDisplay = item.date.toLocaleDateString("ko-KR", {
         month: "short",
         day: "numeric",
@@ -220,20 +224,20 @@ function displaySchedule(data) {
       const itemsHtml = item.items
         .map(
           (pair) => `
-          <div style="margin-bottom: 8px;">
-            <div class="title">${pair.title}</div>
-            ${pair.option ? `<div class="option">${pair.option}</div>` : ""}
-          </div>
-        `,
+    <div style="margin-bottom: 8px;">
+      <div class="title">${pair.title}</div>
+      ${pair.option ? `<div class="option">${pair.option}</div>` : ""}
+    </div>
+  `,
         )
         .join("");
 
       return `
-        <div class="schedule-item ${isToday ? "today" : ""}">
-          <div class="date ${isToday ? "today" : ""}">${dateDisplay}</div>
-          ${itemsHtml}
-        </div>
-      `;
+  <div class="schedule-item ${isToday ? "today" : ""} ${isPast ? "past" : ""}">
+    <div class="date ${isToday ? "today" : ""}">${dateDisplay}</div>
+    ${itemsHtml}
+  </div>
+`;
     })
     .join("");
 
