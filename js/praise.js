@@ -1,7 +1,8 @@
 // const SHEET_ID = "1-ILVOg2DyAmnuE127iSaUnnDcmbrpjjgcoRTs0vOTf0";
 const SHEET_ID = "1LqUQ0cEDyys8JDrWDXfm7u33d7IAfMChdW7vksJ-i2U";
 
-let currentDate = new Date(2026, 3, 14); // 2026-04-14
+let currentDate = new Date(); // 오늘 날짜로 시작
+currentDate.setHours(0, 0, 0, 0); // 시간 초기화
 let allData = [];
 
 // 현재 날짜 정보 표시
@@ -64,105 +65,126 @@ function dateToString(dateObj) {
 
 // Google Sheets gviz JSON API로 데이터 가져오기
 async function fetchSheetData() {
-  try {
-    const year = new Date().getFullYear();
-    const sheetName = year.toString();
+try {
+const year = new Date().getFullYear();
+const sheetName = year.toString();
 
-    // gviz JSON API 엔드포인트
-    const query = encodeURIComponent(`SELECT A, B, C`);
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tq=${query}&sheet=${sheetName}`;
+// gviz JSON API 엔드포인트
+const query = encodeURIComponent(`SELECT A, B, C`);
+const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tq=${query}&sheet=${sheetName}`;
 
-    const response = await fetch(url);
-    if (!response.ok) throw new Error("시트 데이터를 불러올 수 없습니다");
+console.log("📡 요청 정보:");
+console.log("SHEET_ID:", SHEET_ID);
+console.log("시트 이름:", sheetName);
+console.log("URL:", url);
 
-    const text = await response.text();
+const response = await fetch(url);
+if (!response.ok) throw new Error("시트 데이터를 불러올 수 없습니다");
 
-    // gviz 응답에서 JSON 추출
-    // 응답 형식: /*O_o*/google.visualization.Query.setResponse({...});
-    const jsonStr = text.match(/\{.*\}/s)[0];
-    const data = JSON.parse(jsonStr);
+const text = await response.text();
+console.log("📦 응답 텍스트:", text.substring(0, 200));
 
-    parseGvizData(data);
-    filterAndDisplay();
-  } catch (error) {
-    console.error("에러:", error);
-    showError("시트 데이터를 불러오지 못했습니다: " + error.message);
-  }
+// gviz 응답에서 JSON 추출
+const jsonStr = text.match(/\{.*\}/s)[0];
+const data = JSON.parse(jsonStr);
+
+console.log("✅ 파싱된 데이터 구조:");
+console.log("- 행 개수:", data.table?.rows?.length);
+console.log("- 열 정보:", data.table?.cols?.map(col => col.label));
+console.log("- 첫 번째 행:", data.table?.rows?.[0]);
+
+parseGvizData(data);
+filterAndDisplay();
+} catch (error) {
+console.error("❌ 에러:", error);
+showError("시트 데이터를 불러오지 못했습니다: " + error.message);
+}
 }
 
 // gviz JSON 파싱
 function parseGvizData(data) {
-  allData = [];
+allData = [];
 
-  if (!data.table || !data.table.rows) {
-    console.warn("테이블 데이터가 없습니다");
-    return;
-  }
+if (!data.table || !data.table.rows) {
+console.warn("테이블 데이터가 없습니다");
+return;
+}
 
-  let currentDate = null;
-  let currentDateStr = null;
+let currentDate = null;
+let currentDateStr = null;
 
-  data.table.rows.forEach((row, index) => {
-    const cells = row.c;
-    if (!cells || cells.length < 2) return;
+data.table.rows.forEach((row, index) => {
+const cells = row.c;
+if (!cells || cells.length < 2) return;
 
-    const dateValue = cells[0]?.v;
-    const title = cells[1]?.v;
-    const option = cells[2]?.v;
+const dateValue = cells[0]?.v;
+const title = cells[1]?.v;
+const option = cells[2]?.v;
 
-    // A열(날짜)이 있으면 currentDate 업데이트
-    if (dateValue) {
-      currentDateStr = dateToString(dateValue);
-      if (currentDateStr && /^\d{4}-\d{2}-\d{2}$/.test(currentDateStr)) {
-        currentDate = new Date(currentDateStr + "T00:00:00");
-      }
-    }
+console.log(`행 ${index}:`, { dateValue, title, option });
 
-    // B열(내용)이 있으면 현재 날짜와 함께 저장
-    if (title && currentDate && currentDateStr) {
-      allData.push({
-        date: currentDate,
-        dateStr: currentDateStr,
-        title: title,
-        option: option || "",
-      });
-    }
-  });
+// A열(날짜)이 있으면 currentDate 업데이트
+if (dateValue) {
+currentDateStr = dateToString(dateValue);
+console.log(`  → 날짜 변환: ${dateValue} → ${currentDateStr}`);
+if (currentDateStr && /^\d{4}-\d{2}-\d{2}$/.test(currentDateStr)) {
+  currentDate = new Date(currentDateStr + "T00:00:00");
+}
+}
 
-  console.log("파싱된 데이터:", allData);
+// B열(내용)이 있으면 현재 날짜와 함께 저장
+if (title && currentDate && currentDateStr) {
+allData.push({
+  date: currentDate,
+  dateStr: currentDateStr,
+  title: title,
+  option: option || "",
+});
+console.log(`  ✓ 저장됨: ${currentDateStr} - ${title}`);
+}
+});
+
+console.log("📊 최종 파싱된 데이터:", allData);
 }
 
 // 현재 월의 데이터 필터링 및 표시
 function filterAndDisplay() {
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth() + 1;
+const year = currentDate.getFullYear();
+const month = currentDate.getMonth() + 1;
 
-  // 날짜별로 그룹화 (제목과 옵션을 쌍으로 유지)
-  const groupedData = {};
-  
-  allData.forEach((item) => {
-    const itemMonth = item.date.getMonth() + 1;
-    const itemYear = item.date.getFullYear();
-    
-    if (itemYear === year && itemMonth === month) {
-      if (!groupedData[item.dateStr]) {
-        groupedData[item.dateStr] = {
-          date: item.date,
-          dateStr: item.dateStr,
-          items: [], // 제목과 옵션 쌍을 저장
-        };
-      }
-      groupedData[item.dateStr].items.push({
-        title: item.title,
-        option: item.option,
-      });
-    }
-  });
+console.log(`🔍 필터링 중: ${year}년 ${month}월`);
+console.log(`현재 allData 크기: ${allData.length}`);
 
-  // 날짜 순서대로 정렬
-  const filteredData = Object.values(groupedData).sort((a, b) => a.date - b.date);
+// 날짜별로 그룹화 (제목과 옵션을 쌍으로 유지)
+const groupedData = {};
 
-  displaySchedule(filteredData);
+allData.forEach((item) => {
+const itemMonth = item.date.getMonth() + 1;
+const itemYear = item.date.getFullYear();
+
+console.log(`  아이템: ${item.dateStr} (${itemYear}년 ${itemMonth}월)`);
+
+if (itemYear === year && itemMonth === month) {
+if (!groupedData[item.dateStr]) {
+  groupedData[item.dateStr] = {
+    date: item.date,
+    dateStr: item.dateStr,
+    items: [],
+  };
+}
+groupedData[item.dateStr].items.push({
+  title: item.title,
+  option: item.option,
+});
+}
+});
+
+// 날짜 순서대로 정렬
+const filteredData = Object.values(groupedData).sort((a, b) => a.date - b.date);
+
+console.log(`필터링 결과: ${filteredData.length}개 날짜`);
+
+displaySchedule(filteredData);
 }
 
 // 일정 표시
