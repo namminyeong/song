@@ -15,7 +15,22 @@
   <title>찬양팀</title>
   </head>
   <body>
-    <h1>테스트</h1>
+    <div class="container">
+      <div class="header">
+        <h1>📅 일정</h1>
+        <p id="current-info"></p>
+      </div>
+
+      <div class="month-nav">
+        <button id="prev-month">← 이전</button>
+        <span id="month-display" style="font-weight: bold; font-size: 16px"></span>
+        <button id="next-month">다음 →</button>
+      </div>
+
+      <div id="error-container"></div>
+      <div id="loading" class="loading">데이터를 불러오는 중...</div>
+      <div id="schedule-container"></div>
+    </div>
 
     <script src="js/praise.js"></script>
   </body>
