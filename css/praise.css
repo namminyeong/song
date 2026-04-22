@@ -122,3 +122,17 @@ body {
   background-color: #ccc;
   cursor: not-allowed;
 }
+
+.schedule-item.past {
+  border-left-color: #ccc;
+  background-color: #f0f0f0;
+  opacity: 0.6;
+}
+
+.schedule-item.past .title {
+  color: #999;
+}
+
+.schedule-item.past .date {
+  color: #999;
+}
