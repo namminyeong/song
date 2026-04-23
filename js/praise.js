@@ -224,7 +224,7 @@ function displaySchedule(data) {
       const itemsHtml = item.items
         .map(
           (pair) => `
-    <div style="margin-bottom: 8px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
       <div class="title">${pair.title}</div>
       ${pair.option ? `<div class="option">${pair.option}</div>` : ""}
     </div>
