@@ -1,6 +1,8 @@
 // const SHEET_ID = "1-ILVOg2DyAmnuE127iSaUnnDcmbrpjjgcoRTs0vOTf0";
 const SHEET_ID = "1LqUQ0cEDyys8JDrWDXfm7u33d7IAfMChdW7vksJ-i2U";
 
+const TEST_DATE = new Date(2026, 3, 29); // 2026년 4월 29일
+
 let currentDate = new Date(); // 오늘 날짜로 시작
 currentDate.setHours(0, 0, 0, 0); // 시간 초기화
 let allData = [];
@@ -143,7 +145,7 @@ function parseGvizData(data) {
 
     // Option 값 처리
     if (option) {
-      if (option === "ccm") {
+      if (option === "ccm" || option === "CCM") {
         option = ""; // ccm은 공백
       } else if (option.toString().startsWith("찬송가")) {
         // 찬송가로 시작하면 '찬'와 뒤의 숫자/값만 유지
@@ -163,17 +165,19 @@ function parseGvizData(data) {
     }
   });
 
-  console.log("📊 최종 파싱된 데이터:", allData);
+  // console.log("📊 최종 파싱된 데이터:", allData);
 }
 
 // 일정 표시
 function displaySchedule(data) {
   const container = document.getElementById("schedule-container");
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
   const now = new Date();
   const cutoffTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 15, 0, 0); // 오늘 오후 3시
+
+  // 현재 시간 기준 이번주 범위 계산 (일요일 오후 3시 기준)
+  const weekStart = getWeekStart(now);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 7); // 다음주 일요일 오후 3시
 
   if (data.length === 0) {
     container.innerHTML = '<div class="empty">이 달의 일정이 없습니다.</div>';
@@ -182,7 +186,8 @@ function displaySchedule(data) {
 
   container.innerHTML = data
     .map((item) => {
-      const isToday = item.date.getTime() === today.getTime();
+      // 이번주 범위에 있는지 확인
+      const isThisWeek = item.date >= weekStart && item.date < weekEnd;
       const isPast = item.date < cutoffTime;
       const dateDisplay = item.date.toLocaleDateString("ko-KR", {
         month: "short",
@@ -194,10 +199,10 @@ function displaySchedule(data) {
       const itemsHtml = item.items
         .map(
           (pair) => `
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-    <div class="title">${pair.title}</div>
-    ${pair.option ? `<div class="option">${pair.option}</div>` : ""}
-  </div>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+  <div class="title">${pair.title}</div>
+  ${pair.option ? `<div class="option">${pair.option}</div>` : ""}
+</div>
 `,
         )
         .join("");
@@ -207,26 +212,52 @@ function displaySchedule(data) {
         .filter((pair) => pair.event)
         .map(
           (pair) => `
-  <div style="margin-bottom: 8px;">
-    <div class="event" style="font-size: 14px; color: #ff6b6b; font-weight: 500;">${pair.event}</div>
-  </div>
+<div style="margin-bottom: 8px;">
+  <div class="event" style="font-size: 14px; color: #ff6b6b; font-weight: 500;">${pair.event}</div>
+</div>
 `,
         )
         .join("");
 
       return `
-<div class="schedule-item ${isToday ? "today" : ""} ${isPast ? "past" : ""}">
-  <div style="display: flex; justify-content: space-between; align-items: center;">
-    <div class="date ${isToday ? "today" : ""}">${dateDisplay}</div>
-    ${eventHtml}
-  </div>
-    ${itemsHtml}
+<div class="schedule-item ${isThisWeek ? "today" : ""} ${isPast ? "past" : ""}">
+<div style="display: flex; justify-content: space-between; align-items: center;">
+  <div class="date ${isThisWeek ? "today" : ""}">${dateDisplay}</div>
+  ${eventHtml}
+</div>
+  ${itemsHtml}
 </div>
 `;
     })
     .join("");
 
   document.getElementById("loading").style.display = "none";
+}
+
+function getWeekStart(date) {
+  const now = new Date(date);
+
+  const dayOfWeek = now.getDay(); // 0: 일요일
+
+  // 이번주 일요일 15시 계산
+  const thisSunday = new Date(now);
+  thisSunday.setDate(now.getDate() - dayOfWeek);
+  thisSunday.setHours(15, 0, 0, 0);
+
+  let weekStart;
+
+  if (now >= thisSunday) {
+    // 이번주 일요일 15시 이후
+    weekStart = thisSunday;
+  } else {
+    // 이전이면 지난주 일요일 15시
+    weekStart = new Date(thisSunday);
+    weekStart.setDate(thisSunday.getDate() - 7);
+  }
+
+  // console.log(now.getDate(), dayOfWeek, "📅", weekStart.getDate());
+
+  return weekStart;
 }
 
 // 현재 월의 데이터 필터링 및 표시
