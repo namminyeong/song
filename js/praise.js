@@ -1,5 +1,5 @@
-const SHEET_ID = "1-ILVOg2DyAmnuE127iSaUnnDcmbrpjjgcoRTs0vOTf0";
-// const SHEET_ID = "1LqUQ0cEDyys8JDrWDXfm7u33d7IAfMChdW7vksJ-i2U";
+// const SHEET_ID = "1-ILVOg2DyAmnuE127iSaUnnDcmbrpjjgcoRTs0vOTf0";
+const SHEET_ID = "1LqUQ0cEDyys8JDrWDXfm7u33d7IAfMChdW7vksJ-i2U";
 
 let currentDate = new Date(); // 오늘 날짜로 시작
 currentDate.setHours(0, 0, 0, 0); // 시간 초기화
