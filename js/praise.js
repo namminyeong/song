@@ -245,8 +245,12 @@ function displaySchedule(data) {
       // past 클래스가 있으면 close 클래스도 추가
       const closeClass = isPast ? "close" : "";
 
+      // event에 '코이노니아'가 포함되어 있으면 koinonia 클래스 추가
+      const hasKoinonia = item.items.some((pair) => pair.event && pair.event.includes("코이노니아"));
+      const koinoniaClass = hasKoinonia ? "koinonia" : "";
+
       return `
-<div class="schedule-item ${isThisWeek ? "today" : ""} ${isPast ? "past" : ""} ${closeClass}" data-index="${index}">
+<div class="schedule-item ${isThisWeek ? "today" : ""} ${isPast ? "past" : ""} ${closeClass} ${koinoniaClass}" data-index="${index}">
 <div style="display: flex; justify-content: space-between; align-items: center;">
   <div class="date ${isThisWeek ? "today" : ""}">${dateDisplay}</div>
   ${eventHtml}
