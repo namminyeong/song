@@ -153,8 +153,16 @@ function parseGvizData(data) {
       }
     }
 
+    // Event 값 처리 - 줄바꿈 제거 후 첫 줄만 유지
+    // if (event) {
+    //   console.log(event);
+    //   event = event.toString().split("\n")[0];
+    //   console.log(event);
+    // }
+
     // B열(제목) 또는 D열(이벤트)이 있으면 저장
-    if ((title || event) && currentDate && currentDateStr) {
+    // if ((title || event) && currentDate && currentDateStr) {
+    if (currentDate && currentDateStr) {
       allData.push({
         date: currentDate,
         dateStr: currentDateStr,
@@ -185,7 +193,7 @@ function displaySchedule(data) {
   }
 
   container.innerHTML = data
-    .map((item) => {
+    .map((item, index) => {
       // 이번주 범위에 있는지 확인
       const isThisWeek = item.date >= weekStart && item.date < weekEnd;
       const isPast = item.date < cutoffTime;
@@ -196,31 +204,49 @@ function displaySchedule(data) {
       });
 
       // 제목과 옵션을 쌍으로 표시
-      const itemsHtml = item.items
+      let itemsHtml = item.items
         .map(
           (pair) => `
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-  <div class="title">${pair.title}</div>
-  ${pair.option ? `<div class="option">${pair.option}</div>` : ""}
-</div>
+  <div>
+    <div class="title">${pair.title}</div>
+    ${pair.option ? `<div class="option">${pair.option}</div>` : ""}
+  </div>
 `,
         )
         .join("");
+
+      // title이 모두 비어있으면 blank 클래스 추가
+      if (item.items.every((pair) => !pair.title)) {
+        // event에 '없음' 또는 '코이노니아'가 포함되어 있는지 확인
+        const hasNoSchedule = item.items.some((pair) => pair.event && (pair.event.includes("없음") || pair.event.includes("코이노니아")));
+
+        const blankText = hasNoSchedule ? "이 주는 오후 예배가 없습니다" : "아직 일정이 없습니다.";
+
+        itemsHtml = `
+<div>
+<div class="title blank">${blankText}</div>
+</div>
+`;
+      }
 
       // 이벤트 표시 (title이 없어도 표시)
       const eventHtml = item.items
         .filter((pair) => pair.event)
-        .map(
-          (pair) => `
+        .map((pair) => {
+          const firstLine = pair.event.split("\n")[0]; // 첫 번째 줄만 추출
+          return `
 <div style="margin-bottom: 8px;">
-  <div class="event" style="font-size: 14px; color: #ff6b6b; font-weight: 500;">${pair.event}</div>
+  <div class="event" style="font-size: 14px; color: #ff6b6b; font-weight: 500;">${firstLine}</div>
 </div>
-`,
-        )
+`;
+        })
         .join("");
 
+      // past 클래스가 있으면 close 클래스도 추가
+      const closeClass = isPast ? "close" : "";
+
       return `
-<div class="schedule-item ${isThisWeek ? "today" : ""} ${isPast ? "past" : ""}">
+<div class="schedule-item ${isThisWeek ? "today" : ""} ${isPast ? "past" : ""} ${closeClass}" data-index="${index}">
 <div style="display: flex; justify-content: space-between; align-items: center;">
   <div class="date ${isThisWeek ? "today" : ""}">${dateDisplay}</div>
   ${eventHtml}
@@ -230,6 +256,15 @@ function displaySchedule(data) {
 `;
     })
     .join("");
+
+  // 카드 클릭 이벤트 리스너 추가
+  document.querySelectorAll(".schedule-item").forEach((item) => {
+    item.addEventListener("click", function (e) {
+      // 클릭 전파 방지 (필요시)
+      e.stopPropagation();
+      this.classList.toggle("close");
+    });
+  });
 
   document.getElementById("loading").style.display = "none";
 }
@@ -264,6 +299,16 @@ function getWeekStart(date) {
 function filterAndDisplay() {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth() + 1;
+  const weekStart = getWeekStart(new Date());
+
+  // console.log(allData);
+
+  const hasUpcoming = allData.some((item) => {
+    // console.log(item);
+    const itemDate = item.date;
+    return itemDate.getFullYear() === year && itemDate.getMonth() + 1 === month && itemDate >= weekStart;
+  });
+  // console.log(weekStart.getDate(), currentDate.getDate(), hasUpcoming);
 
   const groupedData = {};
 
