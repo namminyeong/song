@@ -245,12 +245,12 @@ function displaySchedule(data) {
       // past 클래스가 있으면 close 클래스도 추가
       const closeClass = isPast ? "close" : "";
 
-      // event에 '코이노니아'가 포함되어 있으면 koinonia 클래스 추가
-      const hasKoinonia = item.items.some((pair) => pair.event && pair.event.includes("코이노니아"));
-      const koinoniaClass = hasKoinonia ? "koinonia" : "";
+      // event에 '없음' 혹은 '코이노니아'가 포함되어 있으면 absence 클래스 추가
+      const hasAbsence = item.items.some((pair) => pair.event && (pair.event.includes("없음") || pair.event.includes("코이노니아")));
+      const absenceClass = hasAbsence ? "absence" : "";
 
       return `
-<div class="schedule-item ${isThisWeek ? "today" : ""} ${isPast ? "past" : ""} ${closeClass} ${koinoniaClass}" data-index="${index}">
+<div class="schedule-item ${isThisWeek ? "today" : ""} ${isPast ? "past" : ""} ${closeClass} ${absenceClass}" data-index="${index}">
 <div style="display: flex; justify-content: space-between; align-items: center;">
   <div class="date ${isThisWeek ? "today" : ""}">${dateDisplay}</div>
   ${eventHtml}
