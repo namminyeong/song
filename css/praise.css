@@ -106,9 +106,12 @@ body {
   font-weight: 500;
 }
 .title.blank {
-  color: #ccc;
+  color: #ff4444;
   font-weight: 400;
   font-size: 14px;
+}
+.koinonia .title.blank {
+  color: #ccc;
 }
 
 .option {
