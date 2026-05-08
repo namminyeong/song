@@ -1,21 +1,29 @@
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  background-color: #f5f5f5;
-  padding: 10px;
+  background-color: #f7f8fa;
+  /* padding: max(20px, 4vw); */
 }
 
 .container {
   max-width: 500px;
-  margin: 0 auto;
-  background-color: white;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  /* margin: 0 auto; */
+  /* background-color: white; */
+  /* border-radius: 8px; */
+  /* padding: 20px; */
+  /* box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); */
 }
 
 .header {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #f4f5fa;
+  padding: clamp(20px, 4vw, 40px);
+  padding-bottom: 4px;
+  /* box-shadow: 4px 4px 12px #00000033; */
 }
 
 .header h1 {
@@ -29,13 +37,47 @@ body {
   color: #999;
 }
 
-.schedule-item {
-  border-left: 4px solid #4A72CE;
-  padding: 15px;
-  margin-bottom: 12px;
-  background-color: #f9f9f9;
+.month-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 00px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #ededed;
+}
+
+.month-nav button {
+  background-color: #29adff;
+  color: white;
+  border: none;
+  padding: 8px 12px;
   border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.month-nav button:active {
+  background-color: #2d8bed;
+}
+
+.month-nav button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+#schedule-container {
+  padding-left: clamp(20px, 4vw, 40px);
+  padding-right: clamp(20px, 4vw, 40px);
+}
+.schedule-item {
+  border-left: 4px solid #4a72ce;
+  padding: 15px;
+  margin-bottom: 20px;
+  background-color: #fff;
+  border-radius: 4px;
+  box-shadow: 4px 4px 12px #aaaaaa4d;
   transition: all 0.3s ease;
+  cursor: pointer;
 }
 
 .schedule-item:active {
@@ -63,13 +105,18 @@ body {
   color: #222;
   font-weight: 500;
 }
+.title.blank {
+  color: #ccc;
+  font-weight: 400;
+  font-size: 14px;
+}
 
 .option {
   font-size: 13px;
   color: #666;
   padding: 5px 8px;
-  background-color: #E9F5FF;
-  border-radius: 4px;
+  background-color: #e9f5ff;
+  border-radius: 3px;
   display: inline-block;
 }
 
@@ -93,45 +140,34 @@ body {
   margin-bottom: 20px;
 }
 
-.month-nav {
+.schedule-item > div:not(:first-child) {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 10px;
-  border-bottom: 2px solid #eee;
-}
-
-.month-nav button {
-  background-color: #29ADFF;
-  color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.month-nav button:active {
-  background-color: #2D8BED;
-}
-
-.month-nav button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
+  &:not(:last-child) {
+    margin-bottom: 8px;
+  }
 }
 
 .schedule-item.past {
   border-left-color: #ccc;
   background-color: #f0f0f0;
-  opacity: 0.6;
   filter: grayscale(100%);
+  opacity: 0.5;
 }
 
-.schedule-item.past .title {
-  color: #999;
-}
-
+.schedule-item.past .title,
 .schedule-item.past .date {
   color: #999;
+}
+
+/* close 클래스 - 카드 접힘 상태 */
+.schedule-item.close {
+  max-height: 50px;
+  overflow: hidden;
+  padding: 12px 15px;
+}
+
+.schedule-item.close > div:not(:first-child) {
+  display: none;
 }
