@@ -220,7 +220,7 @@ function displaySchedule(data) {
         // event에 '없음' 또는 '코이노니아'가 포함되어 있는지 확인
         const hasNoSchedule = item.items.some((pair) => pair.event && (pair.event.includes("없음") || pair.event.includes("코이노니아")));
 
-        const blankText = hasNoSchedule ? "이 주는 오후 예배가 없습니다" : "아직 찬양이 정해지지 않았습니다.";
+        const blankText = hasNoSchedule ? "이 주는 오후 예배가 없습니다" : "아직 찬양이 정해지지 않았습니다";
 
         itemsHtml = `
 <div>
