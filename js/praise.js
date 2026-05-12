@@ -207,11 +207,11 @@ function displaySchedule(data) {
       let itemsHtml = item.items
         .map(
           (pair) => `
-  <div>
-    <div class="title">${pair.title}</div>
-    ${pair.option ? `<div class="option">${pair.option}</div>` : ""}
-  </div>
-`,
+            <li>
+              <div class="title">${pair.title}</div>
+              ${pair.option ? `<div class="option">${pair.option}</div>` : ""}
+            </li>
+          `,
         )
         .join("");
 
@@ -220,13 +220,13 @@ function displaySchedule(data) {
         // event에 '없음' 또는 '코이노니아'가 포함되어 있는지 확인
         const hasNoSchedule = item.items.some((pair) => pair.event && (pair.event.includes("없음") || pair.event.includes("코이노니아")));
 
-        const blankText = hasNoSchedule ? "이 주는 오후 예배가 없습니다" : "아직 찬양이 정해지지 않았습니다";
+        const blankText = hasNoSchedule ? "이 주는 오후 예배가 없습니다" : "아직 찬양이 정해지지 않았습니다.";
 
         itemsHtml = `
-<div>
-<div class="title blank">${blankText}</div>
-</div>
-`;
+          <div>
+            <div class="title blank">${blankText}</div>
+          </div>
+        `;
       }
 
       // 이벤트 표시 (title이 없어도 표시)
@@ -235,10 +235,10 @@ function displaySchedule(data) {
         .map((pair) => {
           const firstLine = pair.event.split("\n")[0]; // 첫 번째 줄만 추출
           return `
-<div style="margin-bottom: 8px;">
-  <div class="event" style="font-size: 14px; color: #ff6b6b; font-weight: 500;">${firstLine}</div>
-</div>
-`;
+            <div>
+              <div class="event" style="font-size: 14px; color: #ff6b6b; font-weight: 500;">${firstLine}</div>
+            </div>
+          `;
         })
         .join("");
 
@@ -250,14 +250,34 @@ function displaySchedule(data) {
       const absenceClass = hasAbsence ? "absence" : "";
 
       return `
-<div class="schedule-item ${isThisWeek ? "today" : ""} ${isPast ? "past" : ""} ${closeClass} ${absenceClass}" data-index="${index}">
-<div style="display: flex; justify-content: space-between; align-items: center;">
-  <div class="date ${isThisWeek ? "today" : ""}">${dateDisplay}</div>
-  ${eventHtml}
-</div>
-  ${itemsHtml}
-</div>
-`;
+        <div class="schedule-item ${isThisWeek ? "this-week" : ""} ${isPast ? "past" : ""} ${closeClass} ${absenceClass}" data-index="${index}">
+          <div>
+            <div class="date ${isThisWeek ? "this-week" : ""}">${dateDisplay}</div>
+            ${eventHtml}
+          </div>
+          <ul>
+            ${itemsHtml}
+          </ul>
+          <p class="chevrons">
+            <svg width="14" height="14" viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg">
+              <polyline
+                points="1,1.5 7,5 13,1.5"
+                fill="none"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <polyline
+                points="1,7.5 7,11 13,7.5"
+                fill="none"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </p>
+        </div>
+      `;
     })
     .join("");
 
