@@ -1,3 +1,12 @@
+:root {
+  --color: #4a72ce;
+}
+.past {
+  --color: #999;
+}
+.this-week {
+  --color: #ff6b6b;
+}
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -85,7 +94,7 @@ body {
   transform: translateX(2px);
 }
 
-.schedule-item.today {
+.schedule-item.this-week {
   border-left-color: #ff6b6b;
   background-color: #fff5f5;
 }
@@ -96,7 +105,7 @@ body {
   color: #333;
 }
 
-.date.today {
+.date.this-week {
   color: #ff6b6b;
 }
 
@@ -122,6 +131,9 @@ body {
   border-radius: 3px;
   display: inline-block;
 }
+.this-week .option {
+  background-color: #fcfcfc;
+}
 
 .empty {
   text-align: center;
@@ -143,13 +155,55 @@ body {
   margin-bottom: 20px;
 }
 
-.schedule-item > div:not(:first-child) {
+.schedule-item.close::after {
+  /* content: ""; */
+  margin-top: -6px;
+  position: relative;
+  border: solid black;
+  border-width: 0 3px 3px 0;
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  transform: rotate(45deg);
+  z-index: 10;
+}
+
+.chevrons {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  padding: 0px 0 8px 0;
+  /* margin-left: -3px; */
+  /* margin-top: 48px; */
+  margin: 0 auto;
+  width: 14px;
+}
+svg {
+  /* scale: 1.2; */
+}
+polyline {
+  stroke: var(--color);
+}
+/* .chevrondown {
+  margin-top: -6px;
+  position: relative;
+  border: solid var(--color);
+  border-width: 0 3px 3px 0;
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  transform: rotate(45deg);
+} */
+
+.schedule-item.close .chevrons {
+  display: flex;
+}
+
+.schedule-item > div:first-child {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  &:not(:last-child) {
-    margin-bottom: 8px;
-  }
+  margin-bottom: 10px;
 }
 
 .schedule-item.past {
@@ -166,11 +220,27 @@ body {
 
 /* close 클래스 - 카드 접힘 상태 */
 .schedule-item.close {
-  max-height: 50px;
+  /* max-height: 50px; */
   overflow: hidden;
   padding: 12px 15px;
 }
 
-.schedule-item.close > div:not(:first-child) {
+/* .schedule-item.close > div:not(:first-child),
+.schedule-item.close > div:not(:last-child) {
   display: none;
+} */
+.schedule-item.close ul {
+  display: none;
+}
+ul {
+  list-style: none;
+  margin-top: 8px;
+}
+li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  &:not(:last-child) {
+    margin-bottom: 8px;
+  }
 }
