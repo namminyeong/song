@@ -10,7 +10,8 @@ let allData = [];
 // 현재 날짜 정보 표시
 function updateCurrentInfo() {
   const today = new Date();
-  document.getElementById("current-info").textContent = `오늘: ${today.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" })}`;
+  document.getElementById("current-info").textContent = `${today.toLocaleDateString("ko-KR", { month: "long", day: "numeric" })}`;
+  // document.getElementById("current-info").textContent = `${today.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" })}`;
 }
 
 // 월 이동
@@ -24,7 +25,9 @@ function updateMonth(offset) {
 function updateMonthDisplay() {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth() + 1;
-  document.getElementById("month-display").textContent = `${year}년 ${month}월`;
+  // document.getElementById("month-display").textContent = `${year}년 ${month}월`;
+  // document.getElementById("month-display").innerHTML = `<span>${year}년</span><span style="margin-left: 12px;font-size: 20px;">${month}월</span>`;
+  document.getElementById("month-display").innerHTML = `<span style="font-size: 20px;">${month}월</span>`;
 
   // 이전/다음 버튼 활성화 여부
   const today = new Date();
