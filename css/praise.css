@@ -1,11 +1,11 @@
 :root {
-  --color: #4a72ce;
+--color: #4a72ce;
 }
 .past {
-  --color: #999;
+--color: #999;
 }
 .this-week {
-  --color: #ff6b6b;
+--color: #ff6b6b;
 }
 
 body {
@@ -170,8 +170,8 @@ body {
 
 .chevrons {
   display: none;
-  flex-direction: column;
-  align-items: center;
+  /* flex-direction: column;
+  align-items: center; */
   padding: 0px 0 8px 0;
   /* margin-left: -3px; */
   /* margin-top: 48px; */
@@ -195,14 +195,18 @@ polyline {
   transform: rotate(45deg);
 } */
 
-.schedule-item.close .chevrons {
+.schedule-item.close:not(:has(.blank)) .chevrons {
   display: flex;
+  display: block;
 }
 
 .schedule-item > div:first-child {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  /* margin-bottom: 10px; */
+}
+.schedule-item:not(:has(.blank)) > div:first-child {
   margin-bottom: 10px;
 }
 
