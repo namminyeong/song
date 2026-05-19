@@ -178,26 +178,20 @@ body {
   margin: 0 auto;
   width: 14px;
 }
-svg {
+svg path {
   /* scale: 1.2; */
+  fill: var(--color);
 }
 polyline {
   stroke: var(--color);
 }
-/* .chevrondown {
-  margin-top: -6px;
-  position: relative;
-  border: solid var(--color);
-  border-width: 0 3px 3px 0;
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  transform: rotate(45deg);
-} */
 
-.schedule-item.close:not(:has(.blank)) .chevrons {
-  display: flex;
+.schedule-item:has(.blank) .date svg {
+  display: none;
+}
+.schedule-item:not(.close):not(:has(.blank)) .chevrons {
   display: block;
+  transform: rotate(180deg);
 }
 
 .schedule-item > div:first-child {
