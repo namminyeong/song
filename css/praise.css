@@ -1,11 +1,16 @@
 :root {
---color: #4a72ce;
+  --color: #4a72ce;
 }
 .past {
---color: #999;
+  --color: #999;
 }
 .this-week {
---color: #ff6b6b;
+  --color: #ff6b6b;
+}
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 body {
@@ -186,6 +191,9 @@ polyline {
   stroke: var(--color);
 }
 
+.schedule-item .date svg {
+  margin-left: 6px;
+}
 .schedule-item:has(.blank) .date svg {
   display: none;
 }
@@ -200,7 +208,7 @@ polyline {
   align-items: center;
   /* margin-bottom: 10px; */
 }
-.schedule-item:not(:has(.blank)) > div:first-child {
+.schedule-item:not(.close) > div:first-child {
   margin-bottom: 10px;
 }
 
