@@ -303,7 +303,8 @@ li {
 
 .image-overlay img {
   width: 90vw;
-  height: 90vh;
+  /* height: 90vh; */
+  aspect-ratio: 1 / 1.4142; /* a4 비율 */
   object-fit: contain;
 }
 
