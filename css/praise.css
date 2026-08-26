@@ -249,4 +249,13 @@ li {
   &:not(:last-child) {
     margin-bottom: 8px;
   }
+  &:nth-child(2n) {
+    --color: 2px;
+    --trans: 10px;
+    padding-top: 8px;
+    border: none;
+    background-image: linear-gradient(90deg, #aaa, #aaa var(--color), transparent var(--color), transparent var(--trans));
+    background-size: var(--trans) 1px; /* 20px 주기로 반복, 두께 1px */
+    background-repeat: repeat-x;
+  }
 }
