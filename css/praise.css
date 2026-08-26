@@ -129,12 +129,14 @@ body {
 }
 
 .option {
-  font-size: 13px;
-  color: #666;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   padding: 5px 8px;
   background-color: #e9f5ff;
-  border-radius: 3px;
-  display: inline-block;
+  border-radius: 28px;
+  color: #666;
+  font-size: 13px;
 }
 .this-week .option {
   background-color: #fcfcfc;
@@ -239,13 +241,35 @@ polyline {
   display: none;
 }
 ul {
+  counter-reset: list;
   list-style: none;
   margin-top: 8px;
 }
 li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(3, 24px) 1fr repeat(2, 100px);
+  grid-template-rows: 24px 28px;
+  row-gap: 8px;
+  grid-template-areas:
+    " num   title  title  title title title"
+    "option option option   .   paper play";
+  &::before {
+    grid-area: num;
+  }
+  .title {
+    grid-area: title;
+  }
+  .option {
+    grid-area: option;
+  }
+  .paper {
+    grid-area: paper;
+  }
+  .play {
+    grid-area: play;
+    z-index: 100;
+  }
+
   &:not(:last-child) {
     margin-bottom: 8px;
   }
@@ -258,4 +282,32 @@ li {
     background-size: var(--trans) 1px; /* 20px 주기로 반복, 두께 1px */
     background-repeat: repeat-x;
   }
+  &::before {
+    counter-increment: list;
+    content: counter(list);
+  }
+}
+
+.image-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgb(0 0 0 / 70%);
+  cursor: pointer;
+}
+
+.image-overlay img {
+  width: 90vw;
+  height: 90vh;
+  object-fit: contain;
+}
+
+button.paper {
+  background-color: #87ceeb;
+  border-radius: 4px;
 }

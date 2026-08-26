@@ -83,7 +83,7 @@ async function fetchSheetData() {
     const sheetName = year.toString();
 
     // gviz JSON API 엔드포인트
-    const query = encodeURIComponent(`SELECT A, B, C, D`);
+    const query = encodeURIComponent(`SELECT A, B, C, D, E`);
     // 필요한 열 선택 (A: 날짜, B: 제목, C: 옵션, D: 이벤트)
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tq=${query}&sheet=${sheetName}`;
 
@@ -139,6 +139,7 @@ function parseGvizData(data) {
     const title = cells[1]?.v;
     let option = cells[2]?.v;
     const event = cells[3]?.v;
+    const paper = cells[4]?.v;
 
     // A열(날짜)이 있으면 currentDate 업데이트
     if (dateValue) {
@@ -174,6 +175,7 @@ function parseGvizData(data) {
         title: title || "",
         option: option || "",
         event: event || "",
+        paper: paper || "",
       });
     }
   });
@@ -183,6 +185,7 @@ function parseGvizData(data) {
 
 // 일정 표시
 function displaySchedule(data) {
+  console.log(data);
   const container = document.getElementById("schedule-container");
   const now = new Date();
   const cutoffTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 15, 0, 0); // 오늘 오후 3시
@@ -218,6 +221,7 @@ function displaySchedule(data) {
             <li>
               <div class="title">${pair.title}</div>
               ${pair.option ? `<div class="option">${pair.option}</div>` : ""}
+              ${pair.paper ? `<button class="paper" data-image="${pair.paper}">이미지 보기</button>` : ""}
             </li>
           `,
         )
@@ -364,6 +368,7 @@ function filterAndDisplay() {
         title: item.title,
         option: item.option,
         event: item.event,
+        paper: item.paper,
       });
     }
   });
@@ -398,5 +403,28 @@ updateCurrentInfo();
 updateMonthDisplay();
 document.getElementById("prev-month").addEventListener("click", () => updateMonth(-1));
 document.getElementById("next-month").addEventListener("click", () => updateMonth(1));
+
+// "이미지 보기" 버튼 클릭 시 이미지 오버레이 표시
+// ⚠️ 캡처(capture) 단계에서 등록해야 함: .schedule-item의 클릭 리스너가
+// 버블링 단계에서 먼저 실행되어 버리기 때문에, 그보다 먼저 이벤트를 가로채서 stopPropagation 해야 함
+document.addEventListener(
+  "click",
+  (e) => {
+    const button = e.target.closest(".paper");
+    if (!button) return;
+
+    e.stopPropagation();
+
+    const imageUrl = button.dataset.image;
+    const overlay = document.createElement("div");
+    overlay.className = "image-overlay";
+    overlay.innerHTML = `
+      <img src="${imageUrl}" alt="">
+    `;
+    overlay.addEventListener("click", () => overlay.remove());
+    document.body.appendChild(overlay);
+  },
+  true,
+);
 
 fetchSheetData();
