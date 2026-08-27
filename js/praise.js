@@ -1,7 +1,7 @@
 import { note, chevrons } from "./utils/icons.js";
 
-// const SHEET_ID = "1-ILVOg2DyAmnuE127iSaUnnDcmbrpjjgcoRTs0vOTf0";
-const SHEET_ID = "1LqUQ0cEDyys8JDrWDXfm7u33d7IAfMChdW7vksJ-i2U";
+const SHEET_ID = "1-ILVOg2DyAmnuE127iSaUnnDcmbrpjjgcoRTs0vOTf0";
+// const SHEET_ID = "1LqUQ0cEDyys8JDrWDXfm7u33d7IAfMChdW7vksJ-i2U";
 let currentDate = new Date(); // 오늘 날짜로 시작
 
 const TEST_DATE = new Date(2026, 7, 29); // 테스트 날짜 (m+1)월
@@ -29,8 +29,8 @@ function updateMonthDisplay() {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth() + 1;
   // document.getElementById("month-display").textContent = `${year}년 ${month}월`;
-  // document.getElementById("month-display").innerHTML = `<span>${year}년</span><span style="margin-left: 12px;font-size: 20px;">${month}월</span>`;
-  document.getElementById("month-display").innerHTML = `<span style="font-size: 20px;">${month}월</span>`;
+  document.getElementById("month-display").innerHTML = `<span>${year}년</span><span style="margin-left: 12px;font-size: 20px;">${month}월</span>`;
+  // document.getElementById("month-display").innerHTML = `<span style="font-size: 20px;">${month}월</span>`;
 
   // 이전/다음 버튼 활성화 여부
   const today = new Date();
