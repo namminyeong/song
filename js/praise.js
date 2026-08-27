@@ -83,8 +83,8 @@ async function fetchSheetData() {
     const sheetName = year.toString();
 
     // gviz JSON API 엔드포인트
-    const query = encodeURIComponent(`SELECT A, B, C, D, E`);
-    // 필요한 열 선택 (A: 날짜, B: 제목, C: 옵션, D: 이벤트)
+    const query = encodeURIComponent(`SELECT A, B, C, D, E, F`);
+    // 필요한 열 선택 (A: 날짜, B: 제목, C: 옵션, D: 이벤트, E: 파일명(하이퍼링크 표시텍스트), F: 실제 이미지 URL)
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tq=${query}&sheet=${sheetName}`;
 
     // console.log("📡 요청 정보:");
@@ -139,8 +139,8 @@ function parseGvizData(data) {
     const title = cells[1]?.v;
     let option = cells[2]?.v;
     const event = cells[3]?.v;
-    const paper = cells[4]?.v;
-
+    const paper = cells[4]?.v; // 표시 파일명 (하이퍼링크 텍스트)
+    const paperUrl = cells[5]?.v; // 실제 이미지 URL (F열, 별도 텍스트로 입력)
     // A열(날짜)이 있으면 currentDate 업데이트
     if (dateValue) {
       currentDateStr = dateToString(dateValue);
@@ -176,6 +176,7 @@ function parseGvizData(data) {
         option: option || "",
         event: event || "",
         paper: paper || "",
+        paperUrl: paperUrl || "",
       });
     }
   });
@@ -213,7 +214,6 @@ function displaySchedule(data) {
         day: "numeric",
         weekday: "short",
       });
-
       // 제목과 옵션을 쌍으로 표시
       let itemsHtml = item.items
         .map(
@@ -221,7 +221,7 @@ function displaySchedule(data) {
             <li>
               <div class="title">${pair.title}</div>
               ${pair.option ? `<div class="option">${pair.option}</div>` : ""}
-              ${pair.paper ? `<button class="paper" data-image="${pair.paper}">이미지 보기</button>` : ""}
+              ${pair.paperUrl ? `<button class="paper" data-image="${pair.paperUrl}" data-filename="${pair.paper || ""}">이미지 보기</button>` : ""}
             </li>
           `,
         )
@@ -369,6 +369,7 @@ function filterAndDisplay() {
         option: item.option,
         event: item.event,
         paper: item.paper,
+        paperUrl: item.paperUrl,
       });
     }
   });
@@ -415,16 +416,42 @@ document.addEventListener(
 
     e.stopPropagation();
 
-    const imageUrl = button.dataset.image;
     const overlay = document.createElement("div");
     overlay.className = "image-overlay";
+    const imageUrl = getDriveImageUrl(button.dataset.image);
+    const fileName = button.dataset.filename || "";
+    console.log(imageUrl);
     overlay.innerHTML = `
-      <img src="${imageUrl}" alt="">
+      <img src="${imageUrl}" alt="${fileName}">
     `;
+
     overlay.addEventListener("click", () => overlay.remove());
     document.body.appendChild(overlay);
   },
   true,
 );
+
+//
+function getDriveImageUrl(url) {
+  if (!url) return "";
+
+  let fileId = url.trim();
+
+  // https://drive.google.com/file/d/FILE_ID/view?usp=sharing 형식
+  const pathMatch = fileId.match(/\/d\/([^/?#]+)/);
+  // https://drive.google.com/open?id=FILE_ID or uc?id=FILE_ID 형식
+  const queryMatch = fileId.match(/[?&]id=([^&]+)/);
+
+  if (pathMatch) {
+    fileId = pathMatch[1];
+  } else if (queryMatch) {
+    fileId = queryMatch[1];
+  }
+  // 둘 다 아니면 이미 파일 ID 자체가 들어온 것으로 간주
+
+  console.log("original:", url, "/ extracted id:", fileId);
+
+  return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
+}
 
 fetchSheetData();
