@@ -92,9 +92,12 @@ body {
   box-shadow: 4px 4px 12px #aaaaaa4d;
   transition: all 0.3s ease;
   cursor: pointer;
+  & ul {
+    cursor: default;
+  }
 }
 
-.schedule-item:active {
+.schedule-item:active:not(:has(ul:active)) {
   background-color: #f0f0f0;
   transform: translateX(2px);
 }
@@ -247,9 +250,10 @@ ul {
 }
 li {
   display: grid;
-  grid-template-columns: repeat(3, 24px) 1fr repeat(2, 100px);
+  grid-template-columns: repeat(3, 24px) 1fr repeat(2, 80px);
   grid-template-rows: 24px 28px;
   row-gap: 8px;
+  column-gap: 8px;
   grid-template-areas:
     " num   title  title  title title title"
     "option option option   .   paper play";
@@ -285,6 +289,12 @@ li {
   &::before {
     counter-increment: list;
     content: counter(list);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* background-color: #fff; */
+    border-radius: 4px;
+    border: 1px solid #aaa;
   }
 }
 
@@ -308,7 +318,9 @@ li {
   object-fit: contain;
 }
 
-button.paper {
-  background-color: #87ceeb;
+button.paper,
+button.play {
+  /* background-color: #fff; */
   border-radius: 4px;
+  border: 1px solid #aaa;
 }

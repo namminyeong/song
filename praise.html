@@ -1,38 +1,43 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet"/>
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=Noto+Sans+KR:wght@400;500;700&display=swap"
+    rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
 
-  <link rel="stylesheet" href="css/reset.css"/>
-  <link rel="stylesheet" href="css/common.css"/>
-  <link rel="stylesheet" href="css/praise.css"/>
-  
+  <link rel="stylesheet" href="css/reset.css" />
+  <link rel="stylesheet" href="css/common.css" />
+  <link rel="stylesheet" href="css/praise.css" />
+
   <title>찬양팀</title>
-  </head>
-  <body>
-    <div class="container">
-      <div class="header">
-        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px">
-          <h1>📅 일정</h1>
-          <p id="current-info"></p>
-        </div>
-        <div class="month-nav">
-          <button id="prev-month">← 이전</button>
-          <span id="month-display" style="font-weight: bold; font-size: 14px"></span>
-          <button id="next-month">다음 →</button>
-        </div>
-      </div>
+</head>
 
-      <div id="error-container"></div>
-      <div id="loading" class="loading">데이터를 불러오는 중...</div>
-      <div id="schedule-container"></div>
+<body>
+  <div class="container">
+    <div class="header">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px">
+        <h1>📅 일정</h1>
+        <p id="current-info"></p>
+      </div>
+      <div class="month-nav">
+        <button id="prev-month">← 이전</button>
+        <span id="month-display" style="font-weight: bold; font-size: 14px"></span>
+        <button id="next-month">다음 →</button>
+      </div>
     </div>
 
-    <script src="js/praise.js"></script>
-  </body>
+    <div id="error-container"></div>
+    <div id="loading" class="loading">데이터를 불러오는 중...</div>
+    <div id="schedule-container"></div>
+  </div>
+
+  <script type="module" src="js/praise.js"></script>
+</body>
+
 </html>

@@ -1,3 +1,5 @@
+import { note, chevrons } from "./utils/icons.js";
+
 // const SHEET_ID = "1-ILVOg2DyAmnuE127iSaUnnDcmbrpjjgcoRTs0vOTf0";
 const SHEET_ID = "1LqUQ0cEDyys8JDrWDXfm7u33d7IAfMChdW7vksJ-i2U";
 let currentDate = new Date(); // 오늘 날짜로 시작
@@ -186,7 +188,6 @@ function parseGvizData(data) {
 
 // 일정 표시
 function displaySchedule(data) {
-  console.log(data);
   const container = document.getElementById("schedule-container");
   const now = new Date();
   const cutoffTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 15, 0, 0); // 오늘 오후 3시
@@ -221,7 +222,8 @@ function displaySchedule(data) {
             <li>
               <div class="title">${pair.title}</div>
               ${pair.option ? `<div class="option">${pair.option}</div>` : ""}
-              ${pair.paperUrl ? `<button class="paper" data-image="${pair.paperUrl}" data-filename="${pair.paper || ""}">이미지 보기</button>` : ""}
+              <button class="paper" data-image="${pair.paperUrl}" data-filename="${pair.paper || ""}" ${!pair.paperUrl ? "disabled" : ""}>악보 보기</button>
+              <button class="play" ${!pair.paperUrl ? "disabled" : ""}>듣기</button>
             </li>
           `,
         )
@@ -264,34 +266,16 @@ function displaySchedule(data) {
       return `
         <div class="schedule-item ${isThisWeek ? "this-week" : ""} ${isPast ? "past" : ""} ${closeClass} ${absenceClass}" data-index="${index}">
           <div>
-            <div class="date ${isThisWeek ? "this-week" : ""}">${dateDisplay}
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3.49553 1.95021V7.93466C3.13877 7.71109 2.71268 7.58173 2.25626 7.58313C1.00255 7.59016 -0.0142917 8.59835 0.000151994 9.81887C0.0145957 11.0211 1.01699 11.9913 2.25337 11.9984C3.51576 12.0068 4.53548 10.9958 4.53548 9.76684V3.7627L10.9586 2.83748V6.70853C10.6018 6.48495 10.1758 6.35559 9.71934 6.357C8.46706 6.36403 7.44878 7.37222 7.46467 8.59132C7.47911 9.79356 8.48151 10.7638 9.71789 10.7722C10.9803 10.7807 12 9.76965 12 8.5407V1.02921C12 0.400669 11.4266 -0.0802239 10.7882 0.011174L4.39682 0.932183C3.87829 1.00671 3.49553 1.43979 3.49553 1.95021Z" fill="black"/>
-              </svg>
+            <div class="date ${isThisWeek ? "this-week" : ""}">
+              ${dateDisplay}
+              ${note}
             </div>
             ${eventHtml}
           </div>
           <ul>
             ${itemsHtml}
           </ul>
-          <p class="chevrons">
-            <svg width="14" height="14" viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg">
-              <polyline
-                points="1,1.5 7,5 13,1.5"
-                fill="none"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <polyline
-                points="1,7.5 7,11 13,7.5"
-                fill="none"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </p>
+          <p class="chevrons">${chevrons}</p>
         </div>
       `;
     })
@@ -300,6 +284,9 @@ function displaySchedule(data) {
   // 카드 클릭 이벤트 리스너 추가
   document.querySelectorAll(".schedule-item").forEach((item) => {
     item.addEventListener("click", function (e) {
+      // ul 내부 클릭이면 아무 동작도 하지 않음 (schedule-item 토글 이벤트 무시)
+      if (e.target.closest("ul")) return;
+
       // 클릭 전파 방지 (필요시)
       e.stopPropagation();
       this.classList.toggle("close");
@@ -420,7 +407,6 @@ document.addEventListener(
     overlay.className = "image-overlay";
     const imageUrl = getDriveImageUrl(button.dataset.image);
     const fileName = button.dataset.filename || "";
-    console.log(imageUrl);
     overlay.innerHTML = `
       <img src="${imageUrl}" alt="${fileName}">
     `;
@@ -448,8 +434,6 @@ function getDriveImageUrl(url) {
     fileId = queryMatch[1];
   }
   // 둘 다 아니면 이미 파일 ID 자체가 들어온 것으로 간주
-
-  console.log("original:", url, "/ extracted id:", fileId);
 
   return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
 }
