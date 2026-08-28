@@ -485,7 +485,7 @@ function closePlayerOverlay() {
   }
 }
 
-// "듣기" 버튼 클릭 시 유튜브(비공개 업로드) 영상을 팝업 플레이어로 재생
+// "듣기" 버튼 클릭 시 데이터 사용 경고 확인창을 먼저 띄우고, 확인 시에만 유튜브 팝업 재생
 document.addEventListener(
   "click",
   (e) => {
@@ -512,33 +512,70 @@ document.addEventListener(
       return;
     }
 
-    const overlay = document.createElement("div");
-    overlay.className = "image-overlay audio-overlay";
-    overlay.innerHTML = `
-      <div class="audio-player-box" style="width:320px; max-width:90vw;">
-        <iframe
-          src="https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1"
-          width="320"
-          height="180"
-          style="border:none; border-radius:8px; display:block;"
-          allow="autoplay; encrypted-media"
-          allowfullscreen
-        ></iframe>
-      </div>
-    `;
-
-    overlay.addEventListener("click", (ev) => {
-      // 플레이어(iframe) 자체 클릭은 닫히지 않도록
-      if (ev.target.closest(".audio-player-box")) return;
-      closePlayerOverlay();
-    });
-
-    document.body.appendChild(overlay);
-    currentPlayerOverlay = overlay;
-    currentPlayButton = button;
-    button.classList.add("playing");
+    showPlayConfirm(videoId, button);
   },
   true,
 );
+
+// 재생 전 데이터 사용 경고 확인창
+function showPlayConfirm(videoId, button) {
+  const confirmOverlay = document.createElement("div");
+  confirmOverlay.className = "image-overlay confirm-overlay";
+  confirmOverlay.innerHTML = `
+    <div class="confirm-box" style="background:#fff; border-radius:12px; padding:24px; max-width:280px; text-align:center;">
+      <p style="margin:0 0 20px; font-size:14px; line-height:1.5; color:#333;">유튜브 영상이 재생됩니다.<br>데이터 사용에 주의해주세요.</p>
+      <div style="display:flex; gap:8px; justify-content:center;">
+        <button type="button" class="confirm-cancel" style="flex:1; padding:10px 0; border:1px solid #ddd; border-radius:8px; background:#fff; cursor:pointer;">취소</button>
+        <button type="button" class="confirm-ok" style="flex:1; padding:10px 0; border:none; border-radius:8px; background:#333; color:#fff; cursor:pointer;">확인</button>
+      </div>
+    </div>
+  `;
+
+  confirmOverlay.addEventListener("click", (ev) => {
+    ev.stopPropagation();
+
+    if (ev.target.closest(".confirm-ok")) {
+      confirmOverlay.remove();
+      openPlayerOverlay(videoId, button);
+      return;
+    }
+
+    // 취소 버튼이거나 바깥(배경) 클릭 시 닫기
+    if (ev.target.closest(".confirm-cancel") || !ev.target.closest(".confirm-box")) {
+      confirmOverlay.remove();
+    }
+  });
+
+  document.body.appendChild(confirmOverlay);
+}
+
+// 실제 유튜브 팝업 플레이어 열기
+function openPlayerOverlay(videoId, button) {
+  const overlay = document.createElement("div");
+  overlay.className = "image-overlay audio-overlay";
+  overlay.innerHTML = `
+    <div class="audio-player-box" style="width:320px; max-width:90vw;">
+      <iframe
+        src="https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1"
+        width="320"
+        height="180"
+        style="border:none; border-radius:8px; display:block;"
+        allow="autoplay; encrypted-media"
+        allowfullscreen
+      ></iframe>
+    </div>
+  `;
+
+  overlay.addEventListener("click", (ev) => {
+    // 플레이어(iframe) 자체 클릭은 닫히지 않도록
+    if (ev.target.closest(".audio-player-box")) return;
+    closePlayerOverlay();
+  });
+
+  document.body.appendChild(overlay);
+  currentPlayerOverlay = overlay;
+  currentPlayButton = button;
+  button.classList.add("playing");
+}
 
 fetchSheetData();
