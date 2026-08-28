@@ -320,6 +320,10 @@ li {
 
 button.paper,
 button.play {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
   /* background-color: #fff; */
   border-radius: 4px;
   border: 1px solid #4a72ce;

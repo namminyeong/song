@@ -1,7 +1,7 @@
-import { note, chevrons } from "./utils/icons.js";
+import { note, chevrons, paper, youtube } from "./utils/icons.js";
 
-const SHEET_ID = "1-ILVOg2DyAmnuE127iSaUnnDcmbrpjjgcoRTs0vOTf0";
-// const SHEET_ID = "1LqUQ0cEDyys8JDrWDXfm7u33d7IAfMChdW7vksJ-i2U";
+// const SHEET_ID = "1-ILVOg2DyAmnuE127iSaUnnDcmbrpjjgcoRTs0vOTf0";
+const SHEET_ID = "1LqUQ0cEDyys8JDrWDXfm7u33d7IAfMChdW7vksJ-i2U";
 let currentDate = new Date(); // 오늘 날짜로 시작
 
 const TEST_DATE = new Date(2026, 7, 29); // 테스트 날짜 (m+1)월
@@ -222,8 +222,12 @@ function displaySchedule(data) {
             <li>
               <div class="title">${pair.title}</div>
               ${pair.option ? `<div class="option">${pair.option}</div>` : ""}
-              <button class="paper" data-image="${pair.paperUrl}" data-filename="${pair.paper || ""}" ${!pair.paperUrl ? "disabled" : ""}>악보 보기</button>
-              <button class="play" ${!pair.paperUrl ? "disabled" : ""}>듣기</button>
+              <button class="paper" data-image="${pair.paperUrl}" data-filename="${pair.paper || ""}" ${!pair.paperUrl ? "disabled" : ""}>
+                ${paper}악보
+              </button>
+              <button class="play" ${!pair.paperUrl ? "disabled" : ""}>
+                ${youtube}듣기
+              </button>
             </li>
           `,
         )

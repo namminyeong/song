@@ -20,3 +20,14 @@ export const chevrons = `<svg width="14" height="14" viewBox="0 0 14 14" xmlns="
     stroke-linejoin="round"
   />
 </svg>`;
+
+export const paper = `<svg width="20" height="16" viewBox="0 0 20 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="12" height="16" rx="4" fill="#fff1f1"/>
+</svg>
+`;
+
+export const youtube = `<svg width="20" height="16" viewBox="0 0 20 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="20" height="16" rx="4" fill="#FF4B4B"/>
+<path d="M8 4L14 7.42857L8 12V4Z" fill="white"/>
+</svg>
+`;
