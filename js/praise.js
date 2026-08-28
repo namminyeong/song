@@ -1,7 +1,10 @@
-import { note, chevrons, paper, youtube } from "./utils/icons.js";
+import { note, chevrons, paper } from "./utils/icons.js";
 
-// const SHEET_ID = "1-ILVOg2DyAmnuE127iSaUnnDcmbrpjjgcoRTs0vOTf0";
-const SHEET_ID = "1LqUQ0cEDyys8JDrWDXfm7u33d7IAfMChdW7vksJ-i2U";
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(navigator.userAgent) ? true : false;
+console.log(isMobile);
+
+let SHEET_ID = "1-ILVOg2DyAmnuE127iSaUnnDcmbrpjjgcoRTs0vOTf0";
+if (isMobile) SHEET_ID = "1LqUQ0cEDyys8JDrWDXfm7u33d7IAfMChdW7vksJ-i2U";
 let currentDate = new Date(); // 오늘 날짜로 시작
 
 const TEST_DATE = new Date(2026, 7, 29); // 테스트 날짜 (m+1)월
@@ -85,8 +88,8 @@ async function fetchSheetData() {
     const sheetName = year.toString();
 
     // gviz JSON API 엔드포인트
-    const query = encodeURIComponent(`SELECT A, B, C, D, E, F`);
-    // 필요한 열 선택 (A: 날짜, B: 제목, C: 옵션, D: 이벤트, E: 파일명(하이퍼링크 표시텍스트), F: 실제 이미지 URL)
+    const query = encodeURIComponent(`SELECT A, B, C, D, E, F, G`);
+    // 필요한 열 선택 (A: 날짜, B: 제목, C: 옵션, D: 이벤트, E: 파일명(하이퍼링크 표시텍스트), F: 실제 이미지 URL, G: 유튜브 링크(비공개 업로드))
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tq=${query}&sheet=${sheetName}`;
 
     // console.log("📡 요청 정보:");
@@ -143,6 +146,7 @@ function parseGvizData(data) {
     const event = cells[3]?.v;
     const paper = cells[4]?.v; // 표시 파일명 (하이퍼링크 텍스트)
     const paperUrl = cells[5]?.v; // 실제 이미지 URL (F열, 별도 텍스트로 입력)
+    const audioUrl = cells[6]?.v; // 유튜브 링크 (G열, 비공개 업로드된 영상 주소 또는 영상 ID)
     // A열(날짜)이 있으면 currentDate 업데이트
     if (dateValue) {
       currentDateStr = dateToString(dateValue);
@@ -179,6 +183,7 @@ function parseGvizData(data) {
         event: event || "",
         paper: paper || "",
         paperUrl: paperUrl || "",
+        audioUrl: audioUrl || "",
       });
     }
   });
@@ -223,10 +228,12 @@ function displaySchedule(data) {
               <div class="title">${pair.title}</div>
               ${pair.option ? `<div class="option">${pair.option}</div>` : ""}
               <button class="paper" data-image="${pair.paperUrl}" data-filename="${pair.paper || ""}" ${!pair.paperUrl ? "disabled" : ""}>
-                ${paper}악보
+                <img src="./image/paper.svg" alt="paper" class="paper-icon">
+                악보
               </button>
-              <button class="play" ${!pair.paperUrl ? "disabled" : ""}>
-                ${youtube}듣기
+              <button class="play" data-audio="${pair.audioUrl || ""}" ${!pair.audioUrl ? "disabled" : ""}>
+                <img src="./image/youtube.svg" alt="youtube" class="play-icon">
+                <span class="play-label">듣기</span>
               </button>
             </li>
           `,
@@ -361,6 +368,7 @@ function filterAndDisplay() {
         event: item.event,
         paper: item.paper,
         paperUrl: item.paperUrl,
+        audioUrl: item.audioUrl,
       });
     }
   });
@@ -441,5 +449,96 @@ function getDriveImageUrl(url) {
 
   return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
 }
+
+// 유튜브 링크(또는 영상 ID)에서 영상 ID만 추출
+// 지원 형식: youtube.com/watch?v=ID, youtu.be/ID, youtube.com/embed/ID, youtube.com/shorts/ID, 영상 ID 자체
+function extractYoutubeId(url) {
+  if (!url) return "";
+
+  const raw = url.trim();
+
+  // 이미 11자리 영상 ID만 들어온 경우
+  if (/^[A-Za-z0-9_-]{11}$/.test(raw)) return raw;
+
+  const patterns = [/[?&]v=([A-Za-z0-9_-]{11})/, /youtu\.be\/([A-Za-z0-9_-]{11})/, /youtube\.com\/embed\/([A-Za-z0-9_-]{11})/, /youtube\.com\/shorts\/([A-Za-z0-9_-]{11})/];
+
+  for (const pattern of patterns) {
+    const match = raw.match(pattern);
+    if (match) return match[1];
+  }
+
+  return "";
+}
+
+// 재생 상태 관리
+let currentPlayerOverlay = null; // 유튜브 플레이어 팝업
+let currentPlayButton = null; // 현재 재생 중인 버튼
+
+function closePlayerOverlay() {
+  if (currentPlayerOverlay) {
+    currentPlayerOverlay.remove();
+    currentPlayerOverlay = null;
+  }
+  if (currentPlayButton) {
+    currentPlayButton.classList.remove("playing");
+    currentPlayButton = null;
+  }
+}
+
+// "듣기" 버튼 클릭 시 유튜브(비공개 업로드) 영상을 팝업 플레이어로 재생
+document.addEventListener(
+  "click",
+  (e) => {
+    const button = e.target.closest(".play");
+    if (!button || button.disabled) return;
+
+    e.stopPropagation();
+
+    const rawUrl = button.dataset.audio;
+    if (!rawUrl) return;
+
+    // 같은 버튼을 다시 누르면 닫기
+    if (currentPlayButton === button) {
+      closePlayerOverlay();
+      return;
+    }
+
+    // 다른 항목이 재생 중이면 먼저 닫기
+    closePlayerOverlay();
+
+    const videoId = extractYoutubeId(rawUrl);
+    if (!videoId) {
+      showError("유튜브 영상 주소를 확인할 수 없습니다.");
+      return;
+    }
+
+    const overlay = document.createElement("div");
+    overlay.className = "image-overlay audio-overlay";
+    overlay.innerHTML = `
+      <div class="audio-player-box" style="width:320px; max-width:90vw;">
+        <iframe
+          src="https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1"
+          width="320"
+          height="180"
+          style="border:none; border-radius:8px; display:block;"
+          allow="autoplay; encrypted-media"
+          allowfullscreen
+        ></iframe>
+      </div>
+    `;
+
+    overlay.addEventListener("click", (ev) => {
+      // 플레이어(iframe) 자체 클릭은 닫히지 않도록
+      if (ev.target.closest(".audio-player-box")) return;
+      closePlayerOverlay();
+    });
+
+    document.body.appendChild(overlay);
+    currentPlayerOverlay = overlay;
+    currentPlayButton = button;
+    button.classList.add("playing");
+  },
+  true,
+);
 
 fetchSheetData();
