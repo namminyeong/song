@@ -9,13 +9,13 @@ body {
 
 /* 헤더 */
 .header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   position: sticky;
   top: 0;
   background: #fff;
   padding: 16px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
 }
 
 .header-left {
@@ -43,8 +43,7 @@ body {
 .container {
   max-width: 500px;
   margin: 0 auto;
-  padding-bottom: 120px;
-  height: 100%;
+  height: calc(100% - 60px);
 }
 
 section {
@@ -72,6 +71,9 @@ section {
 }
 
 .card-list a {
+  display: flex;
+  justify-content: center;
+  align-items: center;
   width: 100%;
   height: 100%;
   border-radius: 1.6rem;
@@ -80,4 +82,5 @@ section {
   font-size: 2rem;
   font-weight: bold;
   font-family: "Gamja Flower", sans-serif;
+  color: transparent;
 }
