@@ -1,6 +1,6 @@
 /* 기본 */
 body {
-  font-family: 'Noto Sans KR', sans-serif;
+  font-family: "Noto Sans KR", sans-serif;
   margin: 0;
   background: #f8f9fb;
   color: #2c3437;
@@ -24,7 +24,7 @@ body {
 }
 
 .header h1 {
-  font-family: 'Plus Jakarta Sans';
+  font-family: "Plus Jakarta Sans";
   font-size: 22px;
 }
 
@@ -40,158 +40,36 @@ body {
 
 /* 레이아웃 */
 .container {
-  max-width: 420px;
+  max-width: 500px;
   margin: 0 auto;
   padding-bottom: 120px;
 }
 
 section {
-  padding: 20px;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-/* 공통 아이콘 */
-.triangle-left,
-.triangle-right {
-  width: 32px;
-  height: 32px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: #e3e9ed;
-  position: relative;
-  cursor: pointer;
-}
-
-/* 삼각형 공통 */
-.triangle-left::before,
-.triangle-right::before {
-  content: "";
-  width: 0;
-  height: 0;
-  border-style: solid;
-}
-
-/* 왼쪽 (◀) */
-.triangle-left::before {
-  border-width: 6px 8px 6px 0;
-  border-color: transparent #2c3437 transparent transparent;
-}
-
-/* 오른쪽 (▶) */
-.triangle-right::before {
-  border-width: 6px 0 6px 8px;
-  border-color: transparent transparent transparent #2c3437;
-}
-
-/* hover (선택) */
-.triangle-left:hover,
-.triangle-right:hover {
-  background: #d4dbdf;
+  padding: 40px;
 }
 
 /* 카드 */
 .card-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 40px;
 }
 
-.song-card {
-  background: #fff;
+.card-list li {
+  display: flex;
+  justify-content: center;
+  align-items: center;
   padding: 16px;
-  border-radius: 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  min-height: 120px;
+  background: #fff;
+  border-radius: 20px;
+  border: 2px solid skyblue;
 }
 
-.meta {
-  display: flex;
-  gap: 8px;
-  font-size: 12px;
-}
-
-.badge {
-  background: #eee;
-  padding: 2px 6px;
-  border-radius: 999px;
-}
-
-.key {
+.card-list a {
+  color: #666;
+  font-size: 2rem;
   font-weight: bold;
-  color: #005cbf;
-}
-
-/* 탭 */
-.tabs {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  margin: 16px 0;
-}
-
-.tabs button {
-  padding: 8px 16px;
-  border-radius: 999px;
-  border: none;
-  background: #e3e9ed;
-  cursor: pointer;
-}
-
-.tabs button.active {
-  background: #005cbf;
-  color: white;
-}
-
-/* 테이블 리스트 */
-.table-list .row {
-  display: flex;
-  align-items: center;
-  padding: 14px 0;
-  border-bottom: 1px solid #ddd;
-}
-
-.col-left {
-  width: 80px;
-  font-size: 12px;
-}
-
-.col-center {
-  flex: 1;
-  font-weight: bold;
-}
-
-.col-right {
-  font-weight: bold;
-  color: #005cbf;
-}
-
-/* 하단 네비 */
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  display: flex;
-  justify-content: space-around;
-  background: rgba(255,255,255,0.9);
-  padding: 12px 0;
-  border-top: 1px solid #ddd;
-}
-
-.bottom-nav button {
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-
-.bottom-nav .active {
-  color: #005cbf;
-  font-weight: bold;
+  font-family: "Gamja Flower", sans-serif;
 }
