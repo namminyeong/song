@@ -11,6 +11,22 @@ const TEST_DATE = new Date(2026, 7, 29); // 테스트 날짜 (m+1)월
 // currentDate = TEST_DATE;
 
 currentDate.setHours(0, 0, 0, 0); // 시간 초기화
+
+// 이번달의 마지막 일요일이 지났으면(즉, 월요일부터는) 접속 시 다음달을 기본으로 보여줌
+// 예: 8/30(일)이 8월의 마지막 일요일이면, 8/30까지는 8월이 보이고 8/31(월)부터는 9월이 보임
+function getLastSundayOfMonth(year, month) {
+  const lastDayOfMonth = new Date(year, month + 1, 0); // 해당 월의 마지막 날
+  const lastDay = lastDayOfMonth.getDate();
+  const dayOfWeek = lastDayOfMonth.getDay(); // 0: 일요일
+  const lastSundayDate = lastDay - dayOfWeek; // 마지막 날에서 그 주 일요일까지 역산
+  return new Date(year, month, lastSundayDate);
+}
+
+const lastSundayOfThisMonth = getLastSundayOfMonth(currentDate.getFullYear(), currentDate.getMonth());
+if (currentDate > lastSundayOfThisMonth) {
+  currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+}
+
 let allData = [];
 
 // 현재 날짜 정보 표시
@@ -22,7 +38,10 @@ function updateCurrentInfo() {
 
 // 월 이동
 function updateMonth(offset) {
-  currentDate.setMonth(currentDate.getMonth() + offset);
+  // 일(day)을 고정하지 않고 setMonth만 호출하면, 현재 일(day)이 이동할 달에 없는 경우
+  // (예: 8/31 -> setMonth(9월)는 9월 31일이 없어 자동으로 10월로 넘어감) 문제가 생김.
+  // 항상 1일로 이동시켜 이런 오버플로우를 방지.
+  currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + offset, 1);
   updateMonthDisplay();
   filterAndDisplay();
 }
@@ -197,10 +216,10 @@ function displaySchedule(data) {
   const now = new Date();
   const cutoffTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 15, 0, 0); // 오늘 오후 3시
 
-  // 현재 시간 기준 이번주 범위 계산 (일요일 오후 3시 기준)
+  // 현재 시간 기준 이번주 범위 계산 (월요일 00시 ~ 다음주 월요일 00시 직전, 즉 일요일까지)
   const weekStart = getWeekStart(now);
   const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 7); // 다음주 일요일 오후 3시
+  weekEnd.setDate(weekStart.getDate() + 7); // 다음주 월요일 00시 (여기 미만까지 이번주)
 
   // 현재 보고 있는 월이 '이번달'인지 여부 (past/close는 이번달에서만 적용)
   const isCurrentMonthView = currentDate.getFullYear() === now.getFullYear() && currentDate.getMonth() === now.getMonth();
@@ -310,23 +329,13 @@ function displaySchedule(data) {
 function getWeekStart(date) {
   const now = new Date(date);
 
-  const dayOfWeek = now.getDay(); // 0: 일요일
+  const dayOfWeek = now.getDay(); // 0: 일요일, 1: 월요일, ... 6: 토요일
 
-  // 이번주 일요일 15시 계산
-  const thisSunday = new Date(now);
-  thisSunday.setDate(now.getDate() - dayOfWeek);
-  thisSunday.setHours(15, 0, 0, 0);
-
-  let weekStart;
-
-  if (now >= thisSunday) {
-    // 이번주 일요일 15시 이후
-    weekStart = thisSunday;
-  } else {
-    // 이전이면 지난주 일요일 15시
-    weekStart = new Date(thisSunday);
-    weekStart.setDate(thisSunday.getDate() - 7);
-  }
+  // 이번주 월요일 00시 계산 (월요일 ~ 일요일이 한 주)
+  // 일요일(0)이면 6일 전, 월요일(1)이면 0일 전, ... 토요일(6)이면 5일 전이 월요일
+  const diffToMonday = (dayOfWeek + 6) % 7;
+  const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday);
+  weekStart.setHours(0, 0, 0, 0);
 
   // console.log(now.getDate(), dayOfWeek, "📅", weekStart.getDate());
 
