@@ -12,6 +12,8 @@ const TEST_DATE = new Date(2026, 7, 29); // 테스트 날짜 (m+1)월
 
 currentDate.setHours(0, 0, 0, 0); // 시간 초기화
 
+const REAL_TODAY = new Date(currentDate); // 실제 오늘 날짜 (월 이동 로직과 무관하게 고정)
+
 // 이번달의 마지막 일요일이 지났으면(즉, 월요일부터는) 접속 시 다음달을 기본으로 보여줌
 // 예: 8/30(일)이 8월의 마지막 일요일이면, 8/30까지는 8월이 보이고 8/31(월)부터는 9월이 보임
 function getLastSundayOfMonth(year, month) {
@@ -31,7 +33,7 @@ let allData = [];
 
 // 현재 날짜 정보 표시
 function updateCurrentInfo() {
-  const today = currentDate;
+  const today = REAL_TODAY;
   document.getElementById("current-info").textContent = `${today.toLocaleDateString("ko-KR", { month: "long", day: "numeric" })}`;
   // document.getElementById("current-info").textContent = `${today.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" })}`;
 }
