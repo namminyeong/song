@@ -336,3 +336,14 @@ button.play {
     }
   }
 }
+@media (max-width: 768px) {
+  li {
+    grid-template-columns: repeat(3, 24px) 1fr repeat(2, 40px);
+  }
+  button.paper,
+  button.play {
+    & span {
+      display: none;
+    }
+  }
+}

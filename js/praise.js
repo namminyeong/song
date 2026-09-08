@@ -250,7 +250,7 @@ function displaySchedule(data) {
               ${pair.option ? `<div class="option">${pair.option}</div>` : ""}
               <button class="paper" data-image="${pair.paperUrl}" data-filename="${pair.paper || ""}" ${!pair.paperUrl ? "disabled" : ""}>
                 <img src="./image/paper.svg" alt="paper" class="paper-icon">
-                악보
+                <span class="paper-label">악보</span>
               </button>
               <button class="play" data-audio="${pair.audioUrl || ""}" ${!pair.audioUrl ? "disabled" : ""}>
                 <img src="./image/youtube.svg" alt="youtube" class="play-icon">
