@@ -61,13 +61,37 @@ body {
 }
 
 .month-nav button {
-  background-color: #29adff;
-  color: white;
-  border: none;
+  position: relative;
   padding: 8px 12px;
+  background-color: #29adff;
   border-radius: 4px;
-  cursor: pointer;
+  border: none;
+  color: white;
   font-size: 14px;
+  cursor: pointer;
+  /* &#prev-month {
+    padding-left: 24px;
+  }
+  &#next-month {
+    padding-right: 24px;
+  }
+  &#prev-month::before,
+  &#next-month::after {
+    content: "";
+    display: inline-block;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 12px;
+    height: 16px;
+    margin: 0 4px 0 0;
+    background-image: url(../image/arr.svg);
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+  &#next-month::after {
+    transform: translateY(-50%) rotate(-180deg);
+  } */
 }
 
 .month-nav button:active {
@@ -84,7 +108,7 @@ body {
   padding-right: clamp(20px, 4vw, 40px);
 }
 .schedule-item {
-  border-left: 4px solid #4a72ce;
+  border-left: 4px solid var(--color);
   padding: 20px;
   margin-bottom: 20px;
   background-color: #fff;
@@ -103,7 +127,7 @@ body {
 }
 
 .schedule-item.this-week {
-  border-left-color: #ff6b6b;
+  border-left-color: var(--color);
   background-color: #fff5f5;
 }
 
@@ -114,7 +138,7 @@ body {
 }
 
 .date.this-week {
-  color: #ff6b6b;
+  color: var(--color);
 }
 
 .title {
@@ -186,6 +210,7 @@ body {
   /* margin-left: -3px; */
   /* margin-top: 48px; */
   margin: 0 auto;
+  margin-top: 20px;
   width: 14px;
 }
 svg path {
@@ -325,8 +350,8 @@ button.play {
   gap: 8px;
   /* background-color: #fff; */
   border-radius: 4px;
-  border: 1px solid #4a72ce;
-  color: #4a72ce;
+  border: 1px solid var(--color);
+  color: var(--color);
   &:disabled {
     border-color: #aaa;
     color: #aaa;
@@ -336,7 +361,7 @@ button.play {
     }
   }
 }
-@media (max-width: 768px) {
+@media (max-width: 360px) {
   li {
     grid-template-columns: repeat(3, 24px) 1fr repeat(2, 40px);
   }

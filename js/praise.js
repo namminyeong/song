@@ -218,10 +218,8 @@ function displaySchedule(data) {
   const now = new Date();
   const cutoffTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 15, 0, 0); // 오늘 오후 3시
 
-  // 현재 시간 기준 이번주 범위 계산 (월요일 00시 ~ 다음주 월요일 00시 직전, 즉 일요일까지)
-  const weekStart = getWeekStart(now);
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 7); // 다음주 월요일 00시 (여기 미만까지 이번주)
+  // 현재 시간 기준 이번주 범위 (월요일 00시 이상 ~ 다음주 월요일 00시 미만)
+  const { weekStart, weekEnd } = getWeekRange(now);
 
   // 현재 보고 있는 월이 '이번달'인지 여부 (past/close는 이번달에서만 적용)
   const isCurrentMonthView = currentDate.getFullYear() === now.getFullYear() && currentDate.getMonth() === now.getMonth();
@@ -328,27 +326,42 @@ function displaySchedule(data) {
   document.getElementById("loading").style.display = "none";
 }
 
+// 주(week)의 기준: 월요일 00:00:00.000 ~ 다음주 월요일 00:00:00.000 직전 (월~일이 한 주)
+// 즉, 일요일 23:59까지는 같은 주이고 월요일 00시가 되는 순간 다음 주로 넘어감
 function getWeekStart(date) {
-  const now = new Date(date);
+  const base = new Date(date);
 
-  const dayOfWeek = now.getDay(); // 0: 일요일, 1: 월요일, ... 6: 토요일
+  const dayOfWeek = base.getDay(); // 0: 일요일, 1: 월요일, ... 6: 토요일
 
-  // 이번주 월요일 00시 계산 (월요일 ~ 일요일이 한 주)
   // 일요일(0)이면 6일 전, 월요일(1)이면 0일 전, ... 토요일(6)이면 5일 전이 월요일
   const diffToMonday = (dayOfWeek + 6) % 7;
-  const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday);
-  weekStart.setHours(0, 0, 0, 0);
 
-  // console.log(now.getDate(), dayOfWeek, "📅", weekStart.getDate());
+  // new Date(년, 월, 일)로 만들면 시/분/초/밀리초가 모두 0이 되어 정확히 월요일 00시가 됨
+  // (일자가 음수여도 자동으로 이전 달로 보정되므로 월초에도 안전)
+  return new Date(base.getFullYear(), base.getMonth(), base.getDate() - diffToMonday);
+}
 
-  return weekStart;
+// 기준 날짜가 속한 주의 [시작, 끝) 범위를 반환
+// weekStart: 이번주 월요일 00시 (포함)
+// weekEnd:   다음주 월요일 00시 (미포함)
+function getWeekRange(date) {
+  const weekStart = getWeekStart(date);
+  const weekEnd = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 7);
+
+  return { weekStart, weekEnd };
+}
+
+// 특정 날짜가 기준 날짜와 같은 주(월~일)에 속하는지 여부
+function isInSameWeek(target, baseDate) {
+  const { weekStart, weekEnd } = getWeekRange(baseDate);
+  return target >= weekStart && target < weekEnd;
 }
 
 // 현재 월의 데이터 필터링 및 표시
 function filterAndDisplay() {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth() + 1;
-  const weekStart = getWeekStart(new Date());
+  const { weekStart } = getWeekRange(new Date()); // 이번주 월요일 00시
 
   // console.log(allData);
 
