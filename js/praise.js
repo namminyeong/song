@@ -3,8 +3,6 @@ import { note, chevrons, paper } from "./utils/icons.js";
 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(navigator.userAgent) ? true : false;
 console.log(isMobile);
 
-let SHEET_ID = "1-ILVOg2DyAmnuE127iSaUnnDcmbrpjjgcoRTs0vOTf0";
-if (isMobile) SHEET_ID = "1LqUQ0cEDyys8JDrWDXfm7u33d7IAfMChdW7vksJ-i2U";
 let currentDate = new Date(); // 오늘 날짜로 시작
 
 const TEST_DATE = new Date(2026, 7, 29); // 테스트 날짜 (m+1)월
@@ -103,6 +101,9 @@ function dateToString(dateObj) {
 }
 
 // Google Sheets gviz JSON API로 데이터 가져오기
+let SHEET_ID = "1-ILVOg2DyAmnuE127iSaUnnDcmbrpjjgcoRTs0vOTf0";
+if (isMobile) SHEET_ID = "1LqUQ0cEDyys8JDrWDXfm7u33d7IAfMChdW7vksJ-i2U";
+
 async function fetchSheetData() {
   try {
     const year = new Date().getFullYear();
@@ -113,6 +114,7 @@ async function fetchSheetData() {
     // 필요한 열 선택 (A: 날짜, B: 제목, C: 옵션, D: 이벤트, E: 파일명(하이퍼링크 표시텍스트), F: 실제 이미지 URL, G: 유튜브 링크(비공개 업로드))
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tq=${query}&sheet=${sheetName}`;
 
+    console.log(sheetName, query, url);
     // console.log("📡 요청 정보:");
     // console.log("SHEET_ID:", SHEET_ID);
     // console.log("시트 이름:", sheetName);

@@ -17,73 +17,55 @@
 </head>
 
 <body>
-
-  <header class="header">
-    <div class="header-left">
-      <span class="material-symbols-outlined icon">music_note</span>
-      <h1>My Songs</h1>
-    </div>
-    <button class="icon-btn">
-      <span class="material-symbols-outlined">search</span>
-    </button>
+  <header class="top">
+    <svg viewBox="0 0 32 32" fill="none" stroke="#0f1b3d" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+      <rect x="3" y="5" width="26" height="24" rx="5" />
+      <path d="M10 2v6M22 2v6M3 12h26" />
+      <circle cx="11" cy="18" r="1" fill="#0f1b3d" />
+      <circle cx="16" cy="18" r="1" fill="#0f1b3d" />
+      <circle cx="21" cy="18" r="1" fill="#0f1b3d" />
+      <circle cx="11" cy="24" r="1" fill="#0f1b3d" />
+      <circle cx="16" cy="24" r="1" fill="#0f1b3d" />
+    </svg>
+    <h1 id="today"></h1>
   </header>
 
-  <main class="container">
+  <section class="hero" id="hero" aria-live="polite">
+    <div class="hero-head">
+      <span class="pill" id="pill">이번주</span>
+      <svg class="deco" viewBox="0 0 190 104" aria-hidden="true">
+        <circle cx="120" cy="30" r="13" fill="#f7d774" opacity=".9" />
+        <path d="M150 104C140 70 160 30 190 20V104Z" fill="#9dbdf2" opacity=".75" />
+        <path d="M40 104C36 84 48 72 62 70C66 84 58 98 40 104Z" fill="#86c5c0" opacity=".85" />
+        <path d="M62 104C64 90 76 80 90 82C88 94 78 102 62 104Z" fill="#a9d7d2" opacity=".85" />
+      </svg>
+    </div>
+    <div class="hero-body" id="heroBody"></div>
+  </section>
 
-    <!-- 이번 달 -->
-    <section>
-      <div class="section-header">
-        <span id="today-date">2026년 9월 17일</span>
-        <div class="row">
-          <span class="triangle-left"></span>
-          <h2 id="this-month">9월</h2>
-          <span class="triangle-right"></span>
-        </div>
-      </div>
+  <nav class="months" id="months" aria-label="월 선택"></nav>
 
-      <div class="card-list">
-        <div class="song-card">
-          <div>
-            <div class="meta">
-              <span class="date">3월 12일</span>
-              <span class="badge">발라드</span>
-            </div>
-            <h3>잊혀진 계절</h3>
-          </div>
-          <span class="key">C#</span>
-        </div>
-      </div>
-    </section>
+  <main class="list" id="list"></main>
 
-    <!-- 전체 -->
-    <section class="all-section">
-      <h2>전체</h2>
-
-      <div class="tabs">
-        <button class="active">올해</button>
-        <button>전체</button>
-        <button>2026년</button>
-        <button>2025년</button>
-      </div>
-
-      <div class="table-list">
-        <div class="row">
-          <div class="col-left">
-            <p class="date">02월 28일</p>
-            <p class="genre">발라드</p>
-          </div>
-          <div class="col-center">그때 그 사람</div>
-          <div class="col-right">Am</div>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <nav class="bottom-nav">
-    <button>Monthly</button>
-    <button class="active">All Songs</button>
-    <button>Settings</button>
+  <nav class="tabs" aria-label="보기 방식">
+    <button class="tab on" id="tabMonth" data-view="month">
+      <svg viewBox="0 0 34 34" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"
+        aria-hidden="true">
+        <rect x="4" y="6" width="26" height="24" rx="5" />
+        <path d="M11 3v6M23 3v6M4 14h26" />
+      </svg>
+      월별
+    </button>
+    <button class="tab" id="tabAll" data-view="all">
+      <svg viewBox="0 0 34 34" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"
+        aria-hidden="true">
+        <path d="M13 9h17M13 17h17M13 25h17" />
+        <circle cx="6" cy="9" r=".8" fill="currentColor" />
+        <circle cx="6" cy="17" r=".8" fill="currentColor" />
+        <circle cx="6" cy="25" r=".8" fill="currentColor" />
+      </svg>
+      전체
+    </button>
   </nav>
 
   <script src="js/ocarina.js"></script>
