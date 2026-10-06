@@ -27,7 +27,12 @@ if (currentDate > lastSundayOfThisMonth) {
   currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
 }
 
-let allData = [];
+let allData = []; // 지금까지 불러온 달들의 데이터 (달 단위로 누적)
+
+// 월별 지연 로딩 상태
+const loadedMonths = new Set(); // 이미 불러온 달 ("YYYY-MM")
+const monthLoads = new Map(); // 진행 중인 달 로딩 Promise (중복 요청 방지)
+const sheetIndexCache = new Map(); // 시트명 -> 월별 행 범위 인덱스 Promise
 
 // 현재 날짜 정보 표시
 function updateCurrentInfo() {
@@ -43,7 +48,7 @@ function updateMonth(offset) {
   // 항상 1일로 이동시켜 이런 오버플로우를 방지.
   currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + offset, 1);
   updateMonthDisplay();
-  filterAndDisplay();
+  showCurrentMonth(); // 아직 안 불러온 달이면 이때 가져옴
 }
 
 // 월 표시 업데이트
@@ -104,62 +109,138 @@ function dateToString(dateObj) {
 let SHEET_ID = "1-ILVOg2DyAmnuE127iSaUnnDcmbrpjjgcoRTs0vOTf0";
 if (isMobile) SHEET_ID = "1LqUQ0cEDyys8JDrWDXfm7u33d7IAfMChdW7vksJ-i2U";
 
-async function fetchSheetData() {
-  try {
-    const year = new Date().getFullYear();
-    const sheetName = year.toString();
+// A: 날짜, B: 제목, C: 옵션, D: 이벤트, E: 파일명(하이퍼링크 표시텍스트), F: 실제 이미지 URL, G: 유튜브 링크(비공개 업로드)
+function monthKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
 
-    // gviz JSON API 엔드포인트
-    const query = encodeURIComponent(`SELECT A, B, C, D, E, F, G`);
-    // 필요한 열 선택 (A: 날짜, B: 제목, C: 옵션, D: 이벤트, E: 파일명(하이퍼링크 표시텍스트), F: 실제 이미지 URL, G: 유튜브 링크(비공개 업로드))
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tq=${query}&sheet=${sheetName}`;
+// gviz 쿼리 실행 공통 함수
+async function fetchGviz(sheetName, query) {
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tq=${encodeURIComponent(query)}&sheet=${encodeURIComponent(sheetName)}`;
 
-    console.log(sheetName, query, url);
-    // console.log("📡 요청 정보:");
-    // console.log("SHEET_ID:", SHEET_ID);
-    // console.log("시트 이름:", sheetName);
-    // console.log("URL:", url);
+  const response = await fetch(url);
+  if (!response.ok) throw new Error("시트 데이터를 불러올 수 없습니다");
 
-    const response = await fetch(url);
-    if (!response.ok) throw new Error("시트 데이터를 불러올 수 없습니다");
+  const text = await response.text();
+  const matched = text.match(/\{.*\}/s);
+  if (!matched) throw new Error("시트 응답을 해석할 수 없습니다");
 
-    const text = await response.text();
-    // console.log("📦 응답 텍스트:", text.substring(0, 200));
-
-    // gviz 응답에서 JSON 추출
-    const jsonStr = text.match(/\{.*\}/s)[0];
-    const data = JSON.parse(jsonStr);
-
-    // console.log("✅ 파싱된 데이터 구조:");
-    // console.log("- 행 개수:", data.table?.rows?.length);
-    // console.log(
-    //   "- 열 정보:",
-    //   data.table?.cols?.map((col) => col.label),
-    // );
-    // console.log("- 첫 번째 행:", data.table?.rows?.[0]);
-
-    parseGvizData(data);
-    filterAndDisplay();
-  } catch (error) {
-    console.error("❌ 에러:", error);
-    showError("시트 데이터를 불러오지 못했습니다: " + error.message);
+  const data = JSON.parse(matched[0]);
+  if (data.status === "error") {
+    const err = data.errors?.[0];
+    throw new Error(err?.detailed_message || err?.message || "시트 쿼리 오류");
   }
+  return data;
+}
+
+// 시트의 월별 행 범위 인덱스 (A열만 가져오므로 가볍고, 시트당 1번만 요청해서 캐시)
+// 날짜(A열)는 그날의 첫 행에만 있고 나머지 곡 행은 비어있기 때문에,
+// WHERE로 월을 걸면 두 번째 곡부터 빠짐 -> 행 위치(OFFSET/LIMIT)로 가져와야 함
+function getSheetIndex(sheetName) {
+  if (!sheetIndexCache.has(sheetName)) {
+    const promise = fetchGviz(sheetName, "SELECT A").then((data) => {
+      const index = {}; // { "2026-10": { start, end } }  (end는 미포함)
+      let curKey = null;
+
+      (data.table?.rows || []).forEach((row, i) => {
+        const v = row.c?.[0]?.v;
+        if (v) curKey = dateToString(v)?.slice(0, 7) ?? null; // 날짜가 나오면 그 달로 전환 (parseGvizData와 같은 규칙)
+        if (!curKey) return;
+
+        if (!index[curKey]) index[curKey] = { start: i, end: i + 1 };
+        else index[curKey].end = i + 1;
+      });
+      return index;
+    });
+
+    // 실패하면 캐시에서 제거해서 다음 시도 때 다시 요청
+    promise.catch(() => sheetIndexCache.delete(sheetName));
+    sheetIndexCache.set(sheetName, promise);
+  }
+  return sheetIndexCache.get(sheetName);
+}
+
+// 특정 달 데이터만 가져와서 allData에 추가
+function loadMonth(target) {
+  const key = monthKey(target);
+  const sheetName = String(target.getFullYear());
+
+  if (loadedMonths.has(key)) return Promise.resolve();
+  if (monthLoads.has(key)) return monthLoads.get(key);
+
+  const promise = (async () => {
+    const index = await getSheetIndex(sheetName);
+    const range = index[key];
+
+    if (range) {
+      const query = `SELECT A, B, C, D, E, F, G LIMIT ${range.end - range.start} OFFSET ${range.start}`;
+      const data = await fetchGviz(sheetName, query);
+      const rows = parseGvizData(data).filter((r) => r.dateStr.startsWith(key));
+      allData.push(...rows);
+      console.log(`📊 ${key} 로딩 완료:`, rows.length, "행");
+    }
+    // range가 없으면 그 달 일정이 없는 것 -> 빈 달로 처리
+    loadedMonths.add(key);
+  })();
+
+  monthLoads.set(key, promise);
+  const cleanup = () => monthLoads.delete(key);
+  promise.then(cleanup, cleanup);
+  return promise;
+}
+
+// 로딩 표시 (원래 loading 요소의 display 값을 기억해서 복원)
+const loadingDisplayDefault = document.getElementById("loading").style.display;
+
+function showLoading() {
+  document.getElementById("error-container").innerHTML = "";
+  document.getElementById("schedule-container").innerHTML = "";
+  document.getElementById("loading").style.display = loadingDisplayDefault;
+}
+
+function hideLoading() {
+  document.getElementById("loading").style.display = "none";
+}
+
+// 현재 보고 있는 달을 (필요하면 불러온 뒤) 표시
+async function showCurrentMonth() {
+  const key = monthKey(currentDate);
+
+  if (!loadedMonths.has(key)) {
+    showLoading();
+    try {
+      await loadMonth(currentDate);
+    } catch (error) {
+      console.error("❌ 에러:", error);
+      if (key === monthKey(currentDate)) {
+        showError("시트 데이터를 불러오지 못했습니다: " + error.message);
+      }
+      return;
+    }
+  }
+
+  // 로딩 중에 사용자가 다른 달로 이동했으면 이 결과는 버림
+  if (key !== monthKey(currentDate)) return;
+
+  document.getElementById("error-container").innerHTML = "";
+  filterAndDisplay();
+  hideLoading();
 }
 
 // gviz JSON 파싱
 function parseGvizData(data) {
-  allData = [];
+  const rows = [];
 
   if (!data.table || !data.table.rows) {
     console.warn("테이블 데이터가 없습니다");
-    return;
+    return rows;
   }
 
   let currentDate = null;
   let currentDateStr = null;
   let currentEvent = null;
 
-  data.table.rows.forEach((row, index) => {
+  data.table.rows.forEach((row) => {
     const cells = row.c;
     if (!cells || cells.length < 2) return;
 
@@ -188,17 +269,10 @@ function parseGvizData(data) {
       }
     }
 
-    // Event 값 처리 - 줄바꿈 제거 후 첫 줄만 유지
-    // if (event) {
-    //   console.log(event);
-    //   event = event.toString().split("\n")[0];
-    //   console.log(event);
-    // }
-
     // B열(제목) 또는 D열(이벤트)이 있으면 저장
     // if ((title || event) && currentDate && currentDateStr) {
     if (currentDate && currentDateStr) {
-      allData.push({
+      rows.push({
         date: currentDate,
         dateStr: currentDateStr,
         title: title || "",
@@ -211,7 +285,7 @@ function parseGvizData(data) {
     }
   });
 
-  // console.log("📊 최종 파싱된 데이터:", allData);
+  return rows;
 }
 
 // 일정 표시
@@ -222,6 +296,7 @@ function displaySchedule(data) {
 
   // 현재 시간 기준 이번주 범위 (월요일 00시 이상 ~ 다음주 월요일 00시 미만)
   const { weekStart, weekEnd } = getWeekRange(now);
+  // console.log(weekStart, weekEnd);
 
   // 현재 보고 있는 월이 '이번달'인지 여부 (past/close는 이번달에서만 적용)
   const isCurrentMonthView = currentDate.getFullYear() === now.getFullYear() && currentDate.getMonth() === now.getMonth();
@@ -241,6 +316,7 @@ function displaySchedule(data) {
         day: "numeric",
         weekday: "short",
       });
+
       // 제목과 옵션을 쌍으로 표시
       let itemsHtml = item.items
         .map(
@@ -249,7 +325,7 @@ function displaySchedule(data) {
               <div class="title">${pair.title}</div>
               ${pair.option ? `<div class="option">${pair.option}</div>` : ""}
               <button class="paper" data-image="${pair.paperUrl}" data-filename="${pair.paper || ""}" ${!pair.paperUrl ? "disabled" : ""}>
-                <img src="./image/paper.svg" alt="paper" class="paper-icon">
+                <span alt="paper" class="paper-icon"></span>
                 <span class="paper-label">악보</span>
               </button>
               <button class="play" data-audio="${pair.audioUrl || ""}" ${!pair.audioUrl ? "disabled" : ""}>
@@ -261,11 +337,11 @@ function displaySchedule(data) {
         )
         .join("");
 
-      // title이 모두 비어있으면 blank 클래스 추가
-      if (item.items.every((pair) => !pair.title)) {
-        // event에 '없음' 또는 '코이노니아'가 포함되어 있는지 확인
-        const hasNoSchedule = item.items.some((pair) => pair.event && (pair.event.includes("없음") || pair.event.includes("코이노니아")));
+      // title이 모두 비어있거나 이벤트상태에 따라 blank 클래스 추가
+      const noTitle = item.items.every((pair) => !pair.title);
+      const hasNoSchedule = item.event && (item.event.includes("오후예배없음") || item.event.includes("코이노니아"));
 
+      if (noTitle || hasNoSchedule) {
         const blankText = hasNoSchedule ? "이 주는 오후 예배가 없습니다" : "아직 찬양이 정해지지 않았습니다.";
 
         itemsHtml = `
@@ -275,24 +351,20 @@ function displaySchedule(data) {
         `;
       }
 
-      // 이벤트 표시 (title이 없어도 표시)
-      const eventHtml = item.items
-        .filter((pair) => pair.event)
-        .map((pair) => {
-          const firstLine = pair.event.split("\n")[0]; // 첫 번째 줄만 추출
-          return `
-            <div>
-              <div class="event" style="font-size: 14px; color: #ff6b6b; font-weight: 500;">${firstLine}</div>
-            </div>
-          `;
-        })
-        .join("");
+      // 이벤트 표시 (노래가 없어도 표시)
+      const eventHtml = item.event
+        ? `
+          <div>
+            <div class="event">${item.event.split("\n")[0]}</div>
+          </div>
+        `
+        : "";
 
       // past 클래스가 있으면 close 클래스도 추가
       const closeClass = isPast ? "close" : "";
 
       // event에 '없음' 혹은 '코이노니아'가 포함되어 있으면 absence 클래스 추가
-      const hasAbsence = item.items.some((pair) => pair.event && (pair.event.includes("없음") || pair.event.includes("코이노니아")));
+      const hasAbsence = item.event && (item.event.includes("없음") || item.event.includes("코이노니아"));
       const absenceClass = hasAbsence ? "absence" : "";
 
       return `
@@ -385,13 +457,13 @@ function filterAndDisplay() {
         groupedData[item.dateStr] = {
           date: item.date,
           dateStr: item.dateStr,
+          event: item.event,
           items: [],
         };
       }
       groupedData[item.dateStr].items.push({
         title: item.title,
         option: item.option,
-        event: item.event,
         paper: item.paper,
         paperUrl: item.paperUrl,
         audioUrl: item.audioUrl,
@@ -400,7 +472,7 @@ function filterAndDisplay() {
   });
 
   const filteredData = Object.values(groupedData).sort((a, b) => a.date - b.date);
-
+  console.log(filteredData);
   displaySchedule(filteredData);
 }
 
@@ -604,4 +676,4 @@ function openPlayerOverlay(videoId, button) {
   button.classList.add("playing");
 }
 
-fetchSheetData();
+showCurrentMonth();

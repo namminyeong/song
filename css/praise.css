@@ -141,6 +141,12 @@ body {
   color: var(--color);
 }
 
+.event {
+  font-size: 14px;
+  color: #ff6b6b;
+  font-weight: 500;
+}
+
 .title {
   font-size: 18px;
   color: #222;
@@ -355,12 +361,21 @@ button.play {
   &:disabled {
     border-color: #aaa;
     color: #aaa;
-    & img {
+    & :is(.paper-icon, .play-icon) {
       filter: grayscale(100%);
       opacity: 0.5;
     }
   }
 }
+button .paper-icon {
+  width: 20px;
+  height: 16px;
+  background-image: url(../image/paper.svg);
+}
+.this-week button .paper-icon {
+  background-image: url(../image/paper-thisWeek.svg);
+}
+
 @media (max-width: 360px) {
   li {
     grid-template-columns: repeat(3, 24px) 1fr repeat(2, 40px);

@@ -7,17 +7,11 @@ async function fetchSheetData() {
 
     // gviz JSON API 엔드포인트
     // const query = encodeURIComponent(`SELECT A, B, C, D, E, F, G, H`);
-    const query = encodeURIComponent(`SELECT A, B, C`);
+    const query = encodeURIComponent(`SELECT A, B, C, D, E, F, G`);
     // 필요한 열 선택 (A: 날짜, B: 장, C: 제목, D: 조성, E: 이벤트, F:파일명(하이퍼링크 표시텍스트), G: 실제 이미지 URL, H: 유튜브 링크(비공개 업로드))
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tq=${query}&sheet=${encodeURIComponent(sheetName)}`;
 
     console.log(sheetName, query, url);
-    // return;
-
-    // console.log("📡 요청 정보:");
-    // console.log("SHEET_ID:", SHEET_ID);
-    // console.log("시트 이름:", sheetName);
-    // console.log("URL:", url);
 
     const response = await fetch(url);
     if (!response.ok) throw new Error("시트 데이터를 불러올 수 없습니다");
@@ -29,14 +23,6 @@ async function fetchSheetData() {
     const jsonStr = text.match(/\{.*\}/s)[0];
     const data = JSON.parse(jsonStr);
 
-    // console.log("✅ 파싱된 데이터 구조:");
-    // console.log("- 행 개수:", data.table?.rows?.length);
-    // console.log(
-    //   "- 열 정보:",
-    //   data.table?.cols?.map((col) => col.label),
-    // );
-    // console.log("- 첫 번째 행:", data.table?.rows?.[0]);
-    console.log(data);
     parseGvizData(data);
     // filterAndDisplay();
   } catch (error) {
