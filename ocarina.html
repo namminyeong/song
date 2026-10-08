@@ -30,22 +30,31 @@
     <h1 id="today"></h1>
   </header>
 
-  <section class="hero" id="hero" aria-live="polite">
-    <div class="hero-head">
+  <section class="this-week" id="this-week" aria-live="polite">
+    <div class="this-week-head">
       <span class="pill" id="pill">이번주</span>
-      <svg class="deco" viewBox="0 0 190 104" aria-hidden="true">
-        <circle cx="120" cy="30" r="13" fill="#f7d774" opacity=".9" />
-        <path d="M150 104C140 70 160 30 190 20V104Z" fill="#9dbdf2" opacity=".75" />
-        <path d="M40 104C36 84 48 72 62 70C66 84 58 98 40 104Z" fill="#86c5c0" opacity=".85" />
-        <path d="M62 104C64 90 76 80 90 82C88 94 78 102 62 104Z" fill="#a9d7d2" opacity=".85" />
-      </svg>
     </div>
-    <div class="hero-body" id="heroBody"></div>
+    <div class="this-week-body" id="thisWeekBody"></div>
   </section>
 
-  <nav class="months" id="months" aria-label="월 선택"></nav>
+  <nav class="months" id="months" aria-label="월 선택">
+    <ul class="months-chips" id="monthsChips">
+      <li class="chip" data-month="1">1월</li>
+      <li class="chip" data-month="2">2월</li>
+      <li class="chip" data-month="3">3월</li>
+      <li class="chip" data-month="4">4월</li>
+      <li class="chip" data-month="5">5월</li>
+      <li class="chip" data-month="6">6월</li>
+      <li class="chip" data-month="7">7월</li>
+      <li class="chip" data-month="8">8월</li>
+      <li class="chip" data-month="9">9월</li>
+      <li class="chip" data-month="10">10월</li>
+      <li class="chip" data-month="11">11월</li>
+      <li class="chip" data-month="12">12월</li>
+    </ul>
+  </nav>
 
-  <main class="list" id="list"></main>
+  <main class="list" id="monthList"></main>
 
   <nav class="tabs" aria-label="보기 방식">
     <button class="tab on" id="tabMonth" data-view="month">
