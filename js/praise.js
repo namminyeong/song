@@ -292,7 +292,7 @@ function parseGvizData(data) {
 function displaySchedule(data) {
   const container = document.getElementById("schedule-container");
   const now = new Date();
-  const cutoffTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 15, 0, 0); // 오늘 오후 3시
+  const cutoffTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
 
   // 현재 시간 기준 이번주 범위 (월요일 00시 이상 ~ 다음주 월요일 00시 미만)
   const { weekStart, weekEnd } = getWeekRange(now);
