@@ -8,7 +8,7 @@ let currentView = "month"; // "month" | "all"
 const today = new Date();
 let selectedMonth = today.getMonth() + 1;
 const THIS_YEAR = today.getFullYear();
-const YEARS = [2024, 2025, 2026, 2027];
+let YEARS = []; // 시트 A열 날짜에서 추출 (오름차순)
 let selectedYear = THIS_YEAR; // 전체 탭 연도 필터 (기본: 올해)
 let closestDateStr = null; // 오늘과 가장 가까운 날짜 (YYYY-MM-DD)
 
@@ -100,14 +100,13 @@ function parseGvizData(data) {
     return;
   }
 
-  let currentDate = null; // 날짜 칸이 비어 있으면 위 행의 날짜를 이어 사용
-
   data.table.rows.forEach((row) => {
     const cells = row.c;
     if (!cells || cells.length < 2) return;
 
-    const parsed = parseDateCell(cells[0]);
-    if (parsed) currentDate = parsed;
+    // A열에 날짜가 있는 행만 사용 (없으면 제외)
+    const currentDate = parseDateCell(cells[0]);
+    if (!currentDate) return;
 
     let option = cells[1]?.v;
     const title = cells[2]?.v;
@@ -122,7 +121,7 @@ function parseGvizData(data) {
       }
     }
 
-    if (!currentDate || !title) return;
+    if (!title) return;
 
     allData.push({
       date: new Date(currentDate),
@@ -134,6 +133,13 @@ function parseGvizData(data) {
 
   allData.sort((a, b) => a.date - b.date);
   closestDateStr = findClosestDateStr();
+
+  // 시트에 존재하는 연도 목록
+  YEARS = [...new Set(allData.map((d) => d.date.getFullYear()))].sort((a, b) => a - b);
+  // 선택 연도가 목록에 없으면: 올해 → 올해 이후 가장 가까운 해 → 마지막 해
+  if (YEARS.length && !YEARS.includes(selectedYear)) {
+    selectedYear = YEARS.find((y) => y >= THIS_YEAR) ?? YEARS[YEARS.length - 1];
+  }
 }
 
 // 오늘 이후 가장 가까운 날짜 찾기
@@ -161,13 +167,32 @@ function findClosestDateStr() {
 /* ---------- 렌더링 ---------- */
 function renderAll() {
   renderThisWeek();
+  renderYearChips();
   renderMonthChips();
   renderList();
+}
+
+// 가져온 날짜와 오늘을 비교해 pill 문구 결정
+function getPillLabel(target) {
+  const base = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const t = new Date(target.getFullYear(), target.getMonth(), target.getDate());
+
+  // 4) 오늘
+  if (t.getTime() === base.getTime()) return "오늘";
+
+  // 1) 다음달 (12월 → 1월처럼 연도가 넘어가는 경우도 처리)
+  const monthDiff = (t.getFullYear() - base.getFullYear()) * 12 + (t.getMonth() - base.getMonth());
+  if (monthDiff >= 1) return "다음달";
+
+  // 2), 3) 같은 달: 7일 이상이면 다음주, 미만이면 이번주
+  const dayDiff = Math.round((t - base) / 86400000);
+  return dayDiff >= 7 ? "다음주" : "이번주";
 }
 
 // 이번주 영역: 오늘과 가장 가까운 날짜 → 월/일/요일
 function renderThisWeek() {
   const body = document.getElementById("thisWeekBody");
+  const pill = document.getElementById("pill");
   const songs = allData.filter((d) => d.dateStr === closestDateStr);
 
   if (!songs.length) {
@@ -176,6 +201,7 @@ function renderThisWeek() {
   }
 
   const d = songs[0].date;
+  pill.textContent = getPillLabel(d); // ← 추가
   const label = `${d.getMonth() + 1}월 ${d.getDate()}일 (${WEEKDAYS[d.getDay()]})`;
 
   body.innerHTML = songs
@@ -267,10 +293,15 @@ function createYearChips() {
   nav.className = "months off";
   nav.id = "years";
   nav.setAttribute("aria-label", "연도 선택");
-  nav.innerHTML = `<ul class="months-chips" id="yearChips" style="grid-template-columns: repeat(${YEARS.length}, 1fr)">
-    ${YEARS.map((y) => `<li class="chip" data-year="${y}">${y}</li>`).join("")}
-  </ul>`;
+  nav.innerHTML = `<ul class="months-chips" id="yearChips"></ul>`;
   document.getElementById("months").after(nav);
+}
+
+// 시트 데이터 기준으로 연도 칩 생성
+function renderYearChips() {
+  const ul = document.getElementById("yearChips");
+  ul.style.gridTemplateColumns = `repeat(${Math.min(Math.max(YEARS.length, 1), 6)}, 1fr)`;
+  ul.innerHTML = YEARS.map((y) => `<li class="chip" data-year="${y}">${y}</li>`).join("");
 }
 
 function bindEvents() {
