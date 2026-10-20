@@ -108,8 +108,12 @@ function parseGvizData(data) {
     const currentDate = parseDateCell(cells[0]);
     if (!currentDate) return;
 
+    // A: 날짜, B: 장, C: 제목, D: 조성, E: 이벤트, F: 파일명, G: 이미지 URL
     let option = cells[1]?.v;
     const title = cells[2]?.v;
+    const key = cells[3]?.v;
+    const event = cells[4]?.v;
+    const imageUrl = cells[6]?.v;
 
     // 장 값 처리
     if (option) {
