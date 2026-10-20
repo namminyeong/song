@@ -329,6 +329,7 @@ a {
   border-radius: 24px 24px 0 0;
   box-shadow: 0 -4px 20px rgba(15, 27, 61, 0.06);
   padding: 14px 0 calc(12px + env(safe-area-inset-bottom));
+  padding: 14px 0;
 }
 .tab {
   display: flex;
