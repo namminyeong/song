@@ -7,6 +7,7 @@
   --blue: #2f80ed;
   --chip: #eef2f8;
   --red: #f0443a;
+  --color: #4a72ce;
 }
 * {
   box-sizing: border-box;
@@ -521,4 +522,82 @@ a {
   &.Db {
     background-image: url(../image/key/flat_4-Db.svg);
   }
+}
+
+button.paper,
+button.play {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  /* background-color: #fff; */
+  border-radius: 4px;
+  border: 1px solid var(--color);
+  color: var(--color);
+  &:disabled {
+    border-color: #aaa;
+    color: #aaa;
+    & :is(.paper-icon, .play-icon) {
+      filter: grayscale(100%);
+      opacity: 0.5;
+    }
+  }
+}
+
+button .paper-icon {
+  width: 20px;
+  height: 16px;
+  background-image: url(../image/paper.svg);
+}
+button .paper-icon {
+  background-image: url(../image/paper-thisWeek.svg);
+}
+
+.image-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.image-popup {
+  position: relative;
+  max-width: 100%;
+  max-height: 100%;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.image-popup img {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100vh - 32px);
+  object-fit: contain;
+}
+
+.image-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  cursor: pointer;
+}
+
+.image-close:hover {
+  background: rgba(0, 0, 0, 0.8);
 }

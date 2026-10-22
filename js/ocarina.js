@@ -135,6 +135,7 @@ function parseGvizData(data) {
       option: option || "",
       key: key || "",
       event: event || "",
+      imageUrl: imageUrl || "",
     });
   });
 
@@ -223,7 +224,13 @@ function renderThisWeek() {
           <h2 class="this-week-title">${esc(s.title)}</h2>
           <p class="key ${esc(s.key)}"></p>
         </div>
-        <div class="this-week-foot"><span class="jang">${esc(s.option)}</span></div>
+        <div class="this-week-foot">
+          <span class="jang">${esc(s.option)}</span>
+          <button class="paper" data-image="${s.imageUrl}" data-filename="" ${!s.imageUrl ? "disabled" : ""}>
+            <span alt="paper" class="paper-icon"></span>
+            <span class="paper-label">악보</span>
+          </button>
+        </div>
       </div>`,
     )
     .join("");
@@ -255,12 +262,14 @@ function itemHTML(s, colorIdx) {
       <span class="day c${colorIdx % 5}">${s.date.getDate()}</span>
       <div class="txt">
         <b>${esc(s.title)}</b>
-        ${s.option ? `<small>${esc(s.option)}</small>` : ""}
-        ${s.event ? `<small>${esc(s.event)}</small>` : ""}
-        ${s.key ? `<small>${esc(s.key)}</small>` : ""}
+        <small>${s.option ? `${esc(s.option)}` : "CCM"}</small>
       </div>
     </div>`;
 }
+
+// ${s.option ? `<small>${esc(s.option)}</small>` : ""}
+// ${s.event ? `<small>${esc(s.event)}</small>` : ""}
+// ${s.key ? `<small>${esc(s.key)}</small>` : ""}
 
 function renderList() {
   const list = document.getElementById("monthList");
@@ -363,3 +372,75 @@ updateCurrentInfo();
 bindEvents();
 renderMonthChips();
 fetchSheetData();
+
+// 악보 버튼 클릭 시 이미지 팝업 표시
+// 캡처 단계에서 등록: 다른 클릭 리스너보다 먼저 가로채기 위함
+document.addEventListener(
+  "click",
+  (e) => {
+    const button = e.target.closest(".paper");
+    if (!button || button.disabled) return;
+
+    e.stopPropagation();
+
+    const imageUrl = getDriveImageUrl(button.dataset.image);
+    if (!imageUrl) return;
+
+    const overlay = document.createElement("div");
+    overlay.className = "image-overlay";
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.innerHTML = `
+      <div class="image-popup">
+        <button type="button" class="image-close" aria-label="닫기">
+          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
+          </svg>
+        </button>
+        <img src="${esc(imageUrl)}" alt="악보">
+      </div>`;
+
+    const onKey = (ev) => {
+      if (ev.key === "Escape") close();
+    };
+    const close = () => {
+      overlay.remove();
+      document.body.style.overflow = "";
+      document.removeEventListener("keydown", onKey);
+    };
+
+    // X 버튼 클릭 → 닫기
+    overlay.querySelector(".image-close").addEventListener("click", close);
+    // 팝업 바깥(어두운 배경) 클릭 → 닫기
+    overlay.addEventListener("click", (ev) => {
+      if (ev.target === overlay) close();
+    });
+    // ESC 키 → 닫기
+    document.addEventListener("keydown", onKey);
+
+    document.body.style.overflow = "hidden"; // 뒤 화면 스크롤 방지
+    document.body.appendChild(overlay);
+  },
+  true,
+);
+
+//
+function getDriveImageUrl(url) {
+  if (!url) return "";
+
+  let fileId = url.trim();
+
+  // https://drive.google.com/file/d/FILE_ID/view?usp=sharing 형식
+  const pathMatch = fileId.match(/\/d\/([^/?#]+)/);
+  // https://drive.google.com/open?id=FILE_ID or uc?id=FILE_ID 형식
+  const queryMatch = fileId.match(/[?&]id=([^&]+)/);
+
+  if (pathMatch) {
+    fileId = pathMatch[1];
+  } else if (queryMatch) {
+    fileId = queryMatch[1];
+  }
+  // 둘 다 아니면 이미 파일 ID 자체가 들어온 것으로 간주
+
+  return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
+}
