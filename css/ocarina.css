@@ -112,7 +112,6 @@ a {
   font-size: 24px;
   font-weight: 600;
   letter-spacing: -0.02em;
-  margin: 22px 0 22px;
   line-height: 1.2;
   word-break: keep-all;
 }
@@ -373,9 +372,6 @@ a {
   padding-top: 22px;
   border-top: 1px solid var(--line);
 }
-.song .this-week-title {
-  margin: 18px 0 18px;
-}
 .btn:disabled {
   opacity: 0.35;
   cursor: default;
@@ -481,5 +477,47 @@ a {
 @media (prefers-reduced-motion: reduce) {
   .loading-spinner {
     animation-duration: 2s;
+  }
+}
+
+.wrap-this-week-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 20px 0;
+}
+
+.key {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  background-image: url(../image/flat.svg);
+  background-repeat: no-repeat;
+  background-size: cover;
+  /* shop */
+  &.G {
+    background-image: url(../image/key/sharp_1-G.svg);
+  }
+  &.D {
+    background-image: url(../image/key/sharp_2-D.svg);
+  }
+  &.A {
+    background-image: url(../image/key/sharp_3-A.svg);
+  }
+  &.E {
+    background-image: url(../image/key/sharp_4-E.svg);
+  }
+  /* flat */
+  &.F {
+    background-image: url(../image/key/flat_1-F.svg);
+  }
+  &.Eb {
+    background-image: url(../image/key/flat_2-Eb.svg);
+  }
+  &.Ab {
+    background-image: url(../image/key/flat_3-Ab.svg);
+  }
+  &.Db {
+    background-image: url(../image/key/flat_4-Db.svg);
   }
 }

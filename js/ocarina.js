@@ -114,6 +114,7 @@ function parseGvizData(data) {
     const key = cells[3]?.v;
     const event = cells[4]?.v;
     const imageUrl = cells[6]?.v;
+    console.log(title, key, event, imageUrl);
 
     // 장 값 처리
     if (option) {
@@ -132,6 +133,8 @@ function parseGvizData(data) {
       dateStr: toDateStr(currentDate),
       title: String(title).trim(),
       option: option || "",
+      key: key || "",
+      event: event || "",
     });
   });
 
@@ -212,8 +215,42 @@ function renderThisWeek() {
     .map(
       (s) => `
       <div class="song">
-        <div class="this-week-meta"><span>${label}</span></div>
-        <h2 class="this-week-title">${esc(s.title)}</h2>
+        <div class="this-week-meta">
+          <span>${label}</span>
+          <span>${esc(s.event)}</span>
+        </div>
+        <div class="wrap-this-week-title">
+          <h2 class="this-week-title">${esc(s.title)}</h2>
+          <p class="key ${esc(s.key)}"></p>
+        </div>
+        <div class="wrap-this-week-title">
+          <h2 class="this-week-title">${esc(s.title)}</h2>
+          <p class="key D"></p>
+        </div>
+        <div class="wrap-this-week-title">
+          <h2 class="this-week-title">${esc(s.title)}</h2>
+          <p class="key A"></p>
+        </div>
+        <div class="wrap-this-week-title">
+          <h2 class="this-week-title">${esc(s.title)}</h2>
+          <p class="key E"></p>
+        </div>
+        <div class="wrap-this-week-title">
+          <h2 class="this-week-title">${esc(s.title)}</h2>
+          <p class="key F"></p>
+        </div>
+        <div class="wrap-this-week-title">
+          <h2 class="this-week-title">${esc(s.title)}</h2>
+          <p class="key Eb"></p>
+        </div>
+        <div class="wrap-this-week-title">
+          <h2 class="this-week-title">${esc(s.title)}</h2>
+          <p class="key Ab"></p>
+        </div>
+        <div class="wrap-this-week-title">
+          <h2 class="this-week-title">${esc(s.title)}</h2>
+          <p class="key Db"></p>
+        </div>
         <div class="this-week-foot"><span class="jang">${esc(s.option)}</span></div>
       </div>`,
     )
@@ -247,6 +284,8 @@ function itemHTML(s, colorIdx) {
       <div class="txt">
         <b>${esc(s.title)}</b>
         ${s.option ? `<small>${esc(s.option)}</small>` : ""}
+        ${s.event ? `<small>${esc(s.event)}</small>` : ""}
+        ${s.key ? `<small>${esc(s.key)}</small>` : ""}
       </div>
     </div>`;
 }
