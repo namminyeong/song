@@ -489,11 +489,12 @@ a {
 
 .key {
   display: inline-block;
-  width: 20px;
+  width: 44px;
   height: 20px;
   background-image: url(../image/flat.svg);
   background-repeat: no-repeat;
-  background-size: cover;
+  background-size: contain;
+  background-position: center right 0;
   /* shop */
   &.G {
     background-image: url(../image/key/sharp_1-G.svg);

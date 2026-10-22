@@ -223,34 +223,6 @@ function renderThisWeek() {
           <h2 class="this-week-title">${esc(s.title)}</h2>
           <p class="key ${esc(s.key)}"></p>
         </div>
-        <div class="wrap-this-week-title">
-          <h2 class="this-week-title">${esc(s.title)}</h2>
-          <p class="key D"></p>
-        </div>
-        <div class="wrap-this-week-title">
-          <h2 class="this-week-title">${esc(s.title)}</h2>
-          <p class="key A"></p>
-        </div>
-        <div class="wrap-this-week-title">
-          <h2 class="this-week-title">${esc(s.title)}</h2>
-          <p class="key E"></p>
-        </div>
-        <div class="wrap-this-week-title">
-          <h2 class="this-week-title">${esc(s.title)}</h2>
-          <p class="key F"></p>
-        </div>
-        <div class="wrap-this-week-title">
-          <h2 class="this-week-title">${esc(s.title)}</h2>
-          <p class="key Eb"></p>
-        </div>
-        <div class="wrap-this-week-title">
-          <h2 class="this-week-title">${esc(s.title)}</h2>
-          <p class="key Ab"></p>
-        </div>
-        <div class="wrap-this-week-title">
-          <h2 class="this-week-title">${esc(s.title)}</h2>
-          <p class="key Db"></p>
-        </div>
         <div class="this-week-foot"><span class="jang">${esc(s.option)}</span></div>
       </div>`,
     )
