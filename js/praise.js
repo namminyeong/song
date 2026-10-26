@@ -288,6 +288,15 @@ function parseGvizData(data) {
   return rows;
 }
 
+// 이벤트 텍스트가 '(' 또는 '（'로 시작하면 줄바꿈된 뒷줄까지 포함해 이벤트 전체를 없는 것으로 처리
+// 예: "(메모)\n특별새벽기도" -> "" (이벤트 없음)
+function cleanEvent(event) {
+  if (!event) return "";
+  const text = String(event).trim();
+  if (/^[(（]/.test(text)) return "";
+  return text;
+}
+
 // 일정 표시
 function displaySchedule(data) {
   const container = document.getElementById("schedule-container");
@@ -339,7 +348,8 @@ function displaySchedule(data) {
 
       // title이 모두 비어있거나 이벤트상태에 따라 blank 클래스 추가
       const noTitle = item.items.every((pair) => !pair.title);
-      const hasNoSchedule = item.event && (item.event.includes("오후예배없음") || item.event.includes("코이노니아"));
+      const eventText = cleanEvent(item.event); // '('로 시작하는 줄 제외한 이벤트 텍스트
+      const hasNoSchedule = eventText && (eventText.includes("오후예배없음") || eventText.includes("코이노니아"));
 
       if (noTitle || hasNoSchedule) {
         const blankText = hasNoSchedule ? "이 주는 오후 예배가 없습니다" : "아직 찬양이 정해지지 않았습니다.";
@@ -352,10 +362,10 @@ function displaySchedule(data) {
       }
 
       // 이벤트 표시 (노래가 없어도 표시)
-      const eventHtml = item.event
+      const eventHtml = eventText
         ? `
           <div>
-            <div class="event">${item.event.split("\n")[0]}</div>
+            <div class="event">${eventText.split("\n")[0]}</div>
           </div>
         `
         : "";
@@ -364,7 +374,7 @@ function displaySchedule(data) {
       const closeClass = isPast ? "close" : "";
 
       // event에 '없음' 혹은 '코이노니아'가 포함되어 있으면 absence 클래스 추가
-      const hasAbsence = item.event && (item.event.includes("없음") || item.event.includes("코이노니아"));
+      const hasAbsence = eventText && (eventText.includes("없음") || eventText.includes("코이노니아"));
       const absenceClass = hasAbsence ? "absence" : "";
 
       return `
