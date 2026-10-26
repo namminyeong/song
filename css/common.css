@@ -1,2 +1,17 @@
-.row {display: flex; flex-direction: row;}
-.col {display: flex; flex-direction: column;}
+.row {
+  display: flex;
+  flex-direction: row;
+}
+.col {
+  display: flex;
+  flex-direction: column;
+}
+.wrap-sb {
+  justify-content: space-between;
+}
+/*  */
+.event {
+  font-size: 14px;
+  color: #ff6b6b;
+  font-weight: 500;
+}

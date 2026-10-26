@@ -67,25 +67,54 @@ function hideLoading() {
 }
 
 /* ---------- 데이터 가져오기 ---------- */
+// gviz 쿼리 실행 → JSON 반환
+// A: 날짜, B: 장, C: 제목, D: 조성, E: 이벤트, F: 파일명, G: 이미지 URL, H: 유튜브 링크
+async function requestGviz(queryStr) {
+  const query = encodeURIComponent(queryStr);
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tq=${query}&sheet=${encodeURIComponent(SHEET_NAME)}`;
+
+  const response = await fetch(url);
+  if (!response.ok) throw new Error("시트 데이터를 불러올 수 없습니다");
+
+  const text = await response.text();
+  const jsonStr = text.match(/\{.*\}/s)[0];
+  return JSON.parse(jsonStr);
+}
+
+let fullLoaded = false; // 전체 데이터 로딩 완료 여부
+
 async function fetchSheetData() {
   showLoading();
+  fullLoaded = false;
+
+  // 이번달 1일 ~ 다다음달 1일 (이번달 + 다음달)
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const rangeStart = toDateStr(monthStart);
+  const rangeEnd = toDateStr(new Date(monthStart.getFullYear(), monthStart.getMonth() + 2, 1));
+
+  // 1) 이번달·다음달만 먼저 요청 → 도착 즉시 화면 표시
+  //    (실패하거나 결과가 없으면 조용히 넘어가고 전체 데이터를 기다림)
+  requestGviz(`SELECT A, B, C, D, E, F, G, H WHERE A >= date '${rangeStart}' AND A < date '${rangeEnd}'`)
+    .then((data) => {
+      if (fullLoaded) return; // 전체 데이터가 이미 왔으면 무시
+      parseGvizData(data);
+      if (!allData.length) return;
+      renderAll();
+      hideLoading();
+    })
+    .catch((error) => console.warn("이번달/다음달 우선 로딩 실패:", error));
+
+  // 2) 전체 데이터는 동시에 요청 → 도착하면 덮어써서 갱신
   try {
-    // A: 날짜, B: 장, C: 제목, D: 조성, E: 이벤트, F: 파일명, G: 이미지 URL
-    const query = encodeURIComponent(`SELECT A, B, C, D, E, F, G`);
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tq=${query}&sheet=${encodeURIComponent(SHEET_NAME)}`;
-
-    const response = await fetch(url);
-    if (!response.ok) throw new Error("시트 데이터를 불러올 수 없습니다");
-
-    const text = await response.text();
-    const jsonStr = text.match(/\{.*\}/s)[0];
-    const data = JSON.parse(jsonStr);
-
+    const data = await requestGviz(`SELECT A, B, C, D, E, F, G, H`);
+    fullLoaded = true;
     parseGvizData(data);
     renderAll();
   } catch (error) {
     console.error("❌ 에러:", error);
-    showError("시트 데이터를 불러오지 못했습니다: " + error.message);
+    if (!allData.length) {
+      showError("시트 데이터를 불러오지 못했습니다: " + error.message);
+    }
   } finally {
     hideLoading(); // 성공/실패 모두 로딩 팝업 닫기
   }
@@ -108,12 +137,13 @@ function parseGvizData(data) {
     const currentDate = parseDateCell(cells[0]);
     if (!currentDate) return;
 
-    // A: 날짜, B: 장, C: 제목, D: 조성, E: 이벤트, F: 파일명, G: 이미지 URL
+    // A: 날짜, B: 장, C: 제목, D: 조성, E: 이벤트, F: 파일명, G: 이미지 URL, H: 유튜브 링크
     let option = cells[1]?.v;
     const title = cells[2]?.v;
     const key = cells[3]?.v;
     const event = cells[4]?.v;
     const imageUrl = cells[6]?.v;
+    const youtubeUrl = cells[7]?.v;
     console.log(title, key, event, imageUrl);
 
     // 장 값 처리
@@ -136,6 +166,7 @@ function parseGvizData(data) {
       key: key || "",
       event: event || "",
       imageUrl: imageUrl || "",
+      youtubeUrl: youtubeUrl ? String(youtubeUrl).trim() : "",
     });
   });
 
@@ -213,8 +244,9 @@ function renderThisWeek() {
   const label = `${d.getMonth() + 1}월 ${d.getDate()}일 (${WEEKDAYS[d.getDay()]})`;
 
   body.innerHTML = songs
-    .map(
-      (s) => `
+    .map((s) => {
+      const ytUrl = getSafeYoutubeUrl(s.youtubeUrl);
+      return `
       <div class="song">
         <div class="this-week-meta">
           <span>${label}</span>
@@ -226,13 +258,19 @@ function renderThisWeek() {
         </div>
         <div class="this-week-foot">
           <span class="jang">${esc(s.option)}</span>
-          <button class="paper" data-image="${s.imageUrl}" data-filename="" ${!s.imageUrl ? "disabled" : ""}>
-            <span alt="paper" class="paper-icon"></span>
-            <span class="paper-label">악보</span>
-          </button>
+          <div class="btns">
+            <button class="paper" data-image="${s.imageUrl}" data-filename="" ${!s.imageUrl ? "disabled" : ""}>
+              <span alt="paper" class="paper-icon"></span>
+              <span class="paper-label">악보</span>
+            </button>
+            <button class="play" data-youtube="${esc(ytUrl)}" ${!ytUrl ? "disabled" : ""}>
+              <img src="./image/youtube.svg" alt="youtube" class="play-icon">
+              <span class="play-label">듣기</span>
+            </button>
+          </div>
         </div>
-      </div>`,
-    )
+      </div>`;
+    })
     .join("");
 }
 
@@ -262,13 +300,15 @@ function itemHTML(s, colorIdx) {
       <span class="day c${colorIdx % 5}">${s.date.getDate()}</span>
       <div class="txt">
         <b>${esc(s.title)}</b>
-        <small>${s.option ? `${esc(s.option)}` : "CCM"}</small>
+        <div class="row wrap-sb">
+          <small>${s.option ? `${esc(s.option)}` : "CCM"}</small>
+          ${s.event ? `<small class="event">${esc(s.event)}</small>` : ""}
+        </div>
       </div>
     </div>`;
 }
 
 // ${s.option ? `<small>${esc(s.option)}</small>` : ""}
-// ${s.event ? `<small>${esc(s.event)}</small>` : ""}
 // ${s.key ? `<small>${esc(s.key)}</small>` : ""}
 
 function renderList() {
@@ -423,6 +463,82 @@ document.addEventListener(
   },
   true,
 );
+
+// 유튜브 링크 검증: http(s) + 유튜브 도메인만 허용 (javascript: 등 차단)
+// 영상 ID(11자리)만 들어온 경우 watch 주소로 변환, 유효하지 않으면 "" 반환
+function getSafeYoutubeUrl(raw) {
+  if (!raw) return "";
+  const str = String(raw).trim();
+
+  if (/^[A-Za-z0-9_-]{11}$/.test(str)) return `https://www.youtube.com/watch?v=${str}`;
+
+  try {
+    const u = new URL(str.startsWith("//") ? `https:${str}` : /^https?:\/\//i.test(str) ? str : `https://${str}`);
+    const host = u.hostname.toLowerCase();
+    const ok = host === "youtu.be" || host === "youtube.com" || host.endsWith(".youtube.com");
+    if (!ok || !/^https?:$/.test(u.protocol)) return "";
+    return u.href;
+  } catch {
+    return "";
+  }
+}
+
+// "듣기" 버튼 클릭 → 이동 안내 팝업 → 확인 시 유튜브로 이동
+document.addEventListener(
+  "click",
+  (e) => {
+    const button = e.target.closest(".play");
+    if (!button || button.disabled) return;
+
+    e.stopPropagation();
+
+    const url = getSafeYoutubeUrl(button.dataset.youtube);
+    if (!url) return;
+
+    showYoutubeConfirm(url);
+  },
+  true,
+);
+
+function showYoutubeConfirm(url) {
+  const overlay = document.createElement("div");
+  overlay.className = "overlay";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
+  overlay.innerHTML = `
+    <div class="box confirm">
+      <p>유튜브 링크로 이동합니다.<br>데이터 사용에 주의해주세요.</p>
+      <div class="row">
+        <button type="button" class="confirm-cancel">취소</button>
+        <button type="button" class="confirm-ok ok">확인</button>
+      </div>
+    </div>`;
+
+  const onKey = (ev) => {
+    if (ev.key === "Escape") close();
+  };
+  const close = () => {
+    overlay.remove();
+    document.removeEventListener("keydown", onKey);
+  };
+
+  overlay.addEventListener("click", (ev) => {
+    ev.stopPropagation();
+
+    if (ev.target.closest(".confirm-ok")) {
+      close();
+      window.open(url, "_blank", "noopener,noreferrer");
+      return;
+    }
+    // 취소 버튼이거나 바깥(배경) 클릭 시 닫기
+    if (ev.target.closest(".confirm-cancel") || !ev.target.closest(".box")) {
+      close();
+    }
+  });
+
+  document.addEventListener("keydown", onKey);
+  document.body.appendChild(overlay);
+}
 
 //
 function getDriveImageUrl(url) {
