@@ -245,7 +245,7 @@ function renderThisWeek() {
 
   body.innerHTML = songs
     .map((s) => {
-      const ytUrl = getSafeYoutubeUrl(s.youtubeUrl);
+      const ytId = extractYoutubeId(s.youtubeUrl);
       return `
       <div class="song">
         <div class="this-week-meta">
@@ -263,7 +263,7 @@ function renderThisWeek() {
               <span alt="paper" class="paper-icon"></span>
               <span class="paper-label">악보</span>
             </button>
-            <button class="play" data-youtube="${esc(ytUrl)}" ${!ytUrl ? "disabled" : ""}>
+            <button class="play" data-youtube="${esc(ytId)}" ${!ytId ? "disabled" : ""}>
               <img src="./image/youtube.svg" alt="youtube" class="play-icon">
               <span class="play-label">듣기</span>
             </button>
@@ -464,26 +464,28 @@ document.addEventListener(
   true,
 );
 
-// 유튜브 링크 검증: http(s) + 유튜브 도메인만 허용 (javascript: 등 차단)
-// 영상 ID(11자리)만 들어온 경우 watch 주소로 변환, 유효하지 않으면 "" 반환
-function getSafeYoutubeUrl(raw) {
-  if (!raw) return "";
-  const str = String(raw).trim();
+// 유튜브 링크(또는 영상 ID)에서 영상 ID만 추출 (유효하지 않으면 "")
+// 지원 형식: youtube.com/watch?v=ID, youtu.be/ID, youtube.com/embed/ID, youtube.com/shorts/ID, 영상 ID 자체
+// 반환값은 [A-Za-z0-9_-]{11}만 허용하므로 embed 주소에 넣어도 안전함
+function extractYoutubeId(url) {
+  if (!url) return "";
 
-  if (/^[A-Za-z0-9_-]{11}$/.test(str)) return `https://www.youtube.com/watch?v=${str}`;
+  const raw = String(url).trim();
 
-  try {
-    const u = new URL(str.startsWith("//") ? `https:${str}` : /^https?:\/\//i.test(str) ? str : `https://${str}`);
-    const host = u.hostname.toLowerCase();
-    const ok = host === "youtu.be" || host === "youtube.com" || host.endsWith(".youtube.com");
-    if (!ok || !/^https?:$/.test(u.protocol)) return "";
-    return u.href;
-  } catch {
-    return "";
+  // 이미 11자리 영상 ID만 들어온 경우
+  if (/^[A-Za-z0-9_-]{11}$/.test(raw)) return raw;
+
+  const patterns = [/[?&]v=([A-Za-z0-9_-]{11})/, /youtu\.be\/([A-Za-z0-9_-]{11})/, /youtube\.com\/embed\/([A-Za-z0-9_-]{11})/, /youtube\.com\/shorts\/([A-Za-z0-9_-]{11})/];
+
+  for (const pattern of patterns) {
+    const match = raw.match(pattern);
+    if (match) return match[1];
   }
+
+  return "";
 }
 
-// "듣기" 버튼 클릭 → 이동 안내 팝업 → 확인 시 유튜브로 이동
+// "듣기" 버튼 클릭 → 데이터 사용 안내 팝업 → 확인 시 유튜브 iframe 팝업 재생
 document.addEventListener(
   "click",
   (e) => {
@@ -492,22 +494,23 @@ document.addEventListener(
 
     e.stopPropagation();
 
-    const url = getSafeYoutubeUrl(button.dataset.youtube);
-    if (!url) return;
+    const videoId = extractYoutubeId(button.dataset.youtube);
+    if (!videoId) return;
 
-    showYoutubeConfirm(url);
+    showPlayConfirm(videoId);
   },
   true,
 );
 
-function showYoutubeConfirm(url) {
+// 재생 전 데이터 사용 안내 확인창
+function showPlayConfirm(videoId) {
   const overlay = document.createElement("div");
   overlay.className = "overlay";
   overlay.setAttribute("role", "dialog");
   overlay.setAttribute("aria-modal", "true");
   overlay.innerHTML = `
     <div class="box confirm">
-      <p>유튜브 링크로 이동합니다.<br>데이터 사용에 주의해주세요.</p>
+      <p>유튜브 영상이 재생됩니다.<br>데이터 사용에 주의해주세요.</p>
       <div class="row">
         <button type="button" class="confirm-cancel">취소</button>
         <button type="button" class="confirm-ok ok">확인</button>
@@ -527,7 +530,7 @@ function showYoutubeConfirm(url) {
 
     if (ev.target.closest(".confirm-ok")) {
       close();
-      window.open(url, "_blank", "noopener,noreferrer");
+      openPlayerOverlay(videoId);
       return;
     }
     // 취소 버튼이거나 바깥(배경) 클릭 시 닫기
@@ -537,6 +540,42 @@ function showYoutubeConfirm(url) {
   });
 
   document.addEventListener("keydown", onKey);
+  document.body.appendChild(overlay);
+}
+
+// 유튜브 iframe 플레이어 팝업
+function openPlayerOverlay(videoId) {
+  const overlay = document.createElement("div");
+  overlay.className = "overlay";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
+  overlay.innerHTML = `
+    <div class="box player">
+      <iframe
+        src="https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1"
+        title="유튜브 영상"
+        allow="autoplay; encrypted-media; picture-in-picture"
+        referrerpolicy="strict-origin-when-cross-origin"
+        allowfullscreen></iframe>
+    </div>`;
+
+  const onKey = (ev) => {
+    if (ev.key === "Escape") close();
+  };
+  // overlay를 제거하면 iframe도 함께 사라져 재생이 멈춤
+  const close = () => {
+    overlay.remove();
+    document.body.style.overflow = "";
+    document.removeEventListener("keydown", onKey);
+  };
+
+  // 플레이어 바깥(어두운 배경) 클릭 → 닫기
+  overlay.addEventListener("click", (ev) => {
+    if (!ev.target.closest(".box")) close();
+  });
+
+  document.addEventListener("keydown", onKey);
+  document.body.style.overflow = "hidden"; // 뒤 화면 스크롤 방지
   document.body.appendChild(overlay);
 }
 
