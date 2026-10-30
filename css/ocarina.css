@@ -292,6 +292,7 @@ a {
   transform: translate(-50%, -50%);
   border-radius: 12px;
   background-color: rgb(47, 128, 237, 0.1);
+  pointer-events: none;
 }
 .item.cur .txt b {
   /* color: var(--blue); */
@@ -548,7 +549,7 @@ button.play {
   padding: 4px 8px;
   /* background-color: #fff; */
   border-radius: 4px;
-  border: 1px solid var(--color);
+  /* border: 1px solid var(--color); */
   color: var(--color);
   &:disabled {
     border-color: #aaa;
@@ -630,4 +631,26 @@ button .play-icon {
   .this-week-foot .play-label {
     display: none;
   }
+}
+
+/* 월별/전체 목록: 제목 옆 악보·유튜브 아이콘 */
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.title-row b {
+  flex: 1;
+  min-width: 0;
+}
+.title-row .btns {
+  flex: none;
+  gap: 6px;
+  position: relative;
+  z-index: 1; /* 현재 주 하이라이트(.item.cur::after) 위로 */
+}
+.item button.paper,
+.item button.play {
+  padding: 4px 6px;
 }

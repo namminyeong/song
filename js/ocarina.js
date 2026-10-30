@@ -68,7 +68,7 @@ function hideLoading() {
 
 /* ---------- 데이터 가져오기 ---------- */
 // gviz 쿼리 실행 → JSON 반환
-// A: 날짜, B: 장, C: 제목, D: 조성, E: 이벤트, F: 파일명, G: 이미지 URL, H: 유튜브 링크
+// A: 날짜, B: 장, C: 제목, D: 조성, E: 이벤트, F: 파일명, G: 이미지 URL, H: 음원(mp3) 링크
 async function requestGviz(queryStr) {
   const query = encodeURIComponent(queryStr);
   const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tq=${query}&sheet=${encodeURIComponent(SHEET_NAME)}`;
@@ -137,13 +137,13 @@ function parseGvizData(data) {
     const currentDate = parseDateCell(cells[0]);
     if (!currentDate) return;
 
-    // A: 날짜, B: 장, C: 제목, D: 조성, E: 이벤트, F: 파일명, G: 이미지 URL, H: 유튜브 링크
+    // A: 날짜, B: 장, C: 제목, D: 조성, E: 이벤트, F: 파일명, G: 이미지 URL, H: 음원(mp3) 링크
     let option = cells[1]?.v;
     const title = cells[2]?.v;
     const key = cells[3]?.v;
     const event = cells[4]?.v;
     const imageUrl = cells[6]?.v;
-    const youtubeUrl = cells[7]?.v;
+    const mediaUrl = cells[7]?.v;
     console.log(title, key, event, imageUrl);
 
     // 장 값 처리
@@ -166,7 +166,7 @@ function parseGvizData(data) {
       key: key || "",
       event: event || "",
       imageUrl: imageUrl || "",
-      youtubeUrl: youtubeUrl ? String(youtubeUrl).trim() : "",
+      mediaUrl: mediaUrl ? String(mediaUrl).trim() : "",
     });
   });
 
@@ -245,7 +245,7 @@ function renderThisWeek() {
 
   body.innerHTML = songs
     .map((s) => {
-      const ytId = extractYoutubeId(s.youtubeUrl);
+      const embedSrc = getEmbedUrl(s.mediaUrl);
       return `
       <div class="song">
         <div class="this-week-meta">
@@ -263,8 +263,8 @@ function renderThisWeek() {
               <span alt="paper" class="paper-icon"></span>
               <span class="paper-label">악보</span>
             </button>
-            <button class="play" data-youtube="${esc(ytId)}" ${!ytId ? "disabled" : ""}>
-              <img src="./image/youtube.svg" alt="youtube" class="play-icon">
+            <button class="play" data-media="${esc(s.mediaUrl)}" ${!embedSrc ? "disabled" : ""}>
+              <img src="./image/play.svg" alt="play" class="play-icon">
               <span class="play-label">듣기</span>
             </button>
           </div>
@@ -295,11 +295,22 @@ function renderMonthChips() {
 // 리스트 한 줄 (좌측엔 일만 표시)
 function itemHTML(s, colorIdx) {
   const cur = s.dateStr === closestDateStr ? " cur" : "";
+  const embedSrc = getEmbedUrl(s.mediaUrl);
   return `
     <div class="item${cur}">
       <span class="day c${colorIdx % 5}">${s.date.getDate()}</span>
       <div class="txt">
-        <b>${esc(s.title)}</b>
+        <div class="title-row">
+          <b>${esc(s.title)}</b>
+          <div class="btns">
+            <button type="button" class="paper" aria-label="악보" data-image="${esc(s.imageUrl)}" data-filename="" ${!s.imageUrl ? "disabled" : ""}>
+              <span class="paper-icon"></span>
+            </button>
+            <button type="button" class="play" aria-label="듣기" data-media="${esc(s.mediaUrl)}" ${!embedSrc ? "disabled" : ""}>
+              <img src="./image/play.svg" alt="" class="play-icon">
+            </button>
+          </div>
+        </div>
         <div class="row wrap-sb">
           <small>${s.option ? `${esc(s.option)}` : "CCM"}</small>
           ${s.event ? `<small class="event">${esc(s.event)}</small>` : ""}
@@ -464,28 +475,38 @@ document.addEventListener(
   true,
 );
 
-// 유튜브 링크(또는 영상 ID)에서 영상 ID만 추출 (유효하지 않으면 "")
-// 지원 형식: youtube.com/watch?v=ID, youtu.be/ID, youtube.com/embed/ID, youtube.com/shorts/ID, 영상 ID 자체
-// 반환값은 [A-Za-z0-9_-]{11}만 허용하므로 embed 주소에 넣어도 안전함
-function extractYoutubeId(url) {
-  if (!url) return "";
+// 시트 H열 링크 → 재생용 iframe 주소 (유효하지 않으면 "")
+//  1) 구글드라이브 mp3: drive.google.com/file/d/ID/view, open?id=ID, uc?id=ID, 파일 ID 자체 → /file/d/ID/preview
+//  2) 유튜브(기존 데이터 호환): watch?v=ID, youtu.be/ID, embed/ID, shorts/ID, 영상 ID 자체
+// ID는 영문/숫자/_/- 만 허용하므로 iframe 주소에 넣어도 안전함
+function getEmbedUrl(raw) {
+  if (!raw) return "";
+  const str = String(raw).trim();
 
-  const raw = String(url).trim();
+  const drive = (id) => `https://drive.google.com/file/d/${id}/preview`;
+  const youtube = (id) => `https://www.youtube.com/embed/${id}?autoplay=1&playsinline=1`;
 
-  // 이미 11자리 영상 ID만 들어온 경우
-  if (/^[A-Za-z0-9_-]{11}$/.test(raw)) return raw;
+  // ID만 입력된 경우: 유튜브 영상 ID는 11자, 드라이브 파일 ID는 보통 25자 이상
+  if (/^[A-Za-z0-9_-]{11}$/.test(str)) return youtube(str);
+  if (/^[A-Za-z0-9_-]{25,}$/.test(str)) return drive(str);
 
+  // 구글드라이브 링크
+  if (/(?:drive|docs)\.google\.com/i.test(str)) {
+    const m = str.match(/\/d\/([A-Za-z0-9_-]+)/) || str.match(/[?&]id=([A-Za-z0-9_-]+)/);
+    return m ? drive(m[1]) : "";
+  }
+
+  // 유튜브 링크
   const patterns = [/[?&]v=([A-Za-z0-9_-]{11})/, /youtu\.be\/([A-Za-z0-9_-]{11})/, /youtube\.com\/embed\/([A-Za-z0-9_-]{11})/, /youtube\.com\/shorts\/([A-Za-z0-9_-]{11})/];
-
   for (const pattern of patterns) {
-    const match = raw.match(pattern);
-    if (match) return match[1];
+    const match = str.match(pattern);
+    if (match) return youtube(match[1]);
   }
 
   return "";
 }
 
-// "듣기" 버튼 클릭 → 데이터 사용 안내 팝업 → 확인 시 유튜브 iframe 팝업 재생
+// "듣기" 버튼 클릭 → 데이터 사용 안내 팝업 → 확인 시 iframe 플레이어 팝업
 document.addEventListener(
   "click",
   (e) => {
@@ -494,23 +515,23 @@ document.addEventListener(
 
     e.stopPropagation();
 
-    const videoId = extractYoutubeId(button.dataset.youtube);
-    if (!videoId) return;
+    const src = getEmbedUrl(button.dataset.media);
+    if (!src) return;
 
-    showPlayConfirm(videoId);
+    showPlayConfirm(src);
   },
   true,
 );
 
 // 재생 전 데이터 사용 안내 확인창
-function showPlayConfirm(videoId) {
+function showPlayConfirm(src) {
   const overlay = document.createElement("div");
   overlay.className = "overlay";
   overlay.setAttribute("role", "dialog");
   overlay.setAttribute("aria-modal", "true");
   overlay.innerHTML = `
     <div class="box confirm">
-      <p>유튜브 영상이 재생됩니다.<br>데이터 사용에 주의해주세요.</p>
+      <p>음원이 재생됩니다.<br>데이터 사용에 주의해주세요.</p>
       <div class="row">
         <button type="button" class="confirm-cancel">취소</button>
         <button type="button" class="confirm-ok ok">확인</button>
@@ -530,7 +551,7 @@ function showPlayConfirm(videoId) {
 
     if (ev.target.closest(".confirm-ok")) {
       close();
-      openPlayerOverlay(videoId);
+      openPlayerOverlay(src);
       return;
     }
     // 취소 버튼이거나 바깥(배경) 클릭 시 닫기
@@ -543,8 +564,8 @@ function showPlayConfirm(videoId) {
   document.body.appendChild(overlay);
 }
 
-// 유튜브 iframe 플레이어 팝업
-function openPlayerOverlay(videoId) {
+// iframe 플레이어 팝업 (드라이브 mp3 미리보기 / 유튜브)
+function openPlayerOverlay(src) {
   const overlay = document.createElement("div");
   overlay.className = "overlay";
   overlay.setAttribute("role", "dialog");
@@ -552,8 +573,8 @@ function openPlayerOverlay(videoId) {
   overlay.innerHTML = `
     <div class="box player">
       <iframe
-        src="https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1"
-        title="유튜브 영상"
+        src="${esc(src)}"
+        title="음원 플레이어"
         allow="autoplay; encrypted-media; picture-in-picture"
         referrerpolicy="strict-origin-when-cross-origin"
         allowfullscreen></iframe>
