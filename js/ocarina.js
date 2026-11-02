@@ -11,6 +11,7 @@ const THIS_YEAR = today.getFullYear();
 let YEARS = []; // 시트 A열 날짜에서 추출 (오름차순)
 let selectedYear = THIS_YEAR; // 전체 탭 연도 필터 (기본: 올해)
 let closestDateStr = null; // 오늘과 가장 가까운 날짜 (YYYY-MM-DD)
+let lastThisWeekHtml = ""; // 이번주 영역 마지막 렌더 결과
 
 /* ---------- 유틸 ---------- */
 const pad = (n) => String(n).padStart(2, "0");
@@ -68,7 +69,7 @@ function hideLoading() {
 
 /* ---------- 데이터 가져오기 ---------- */
 // gviz 쿼리 실행 → JSON 반환
-// A: 날짜, B: 장, C: 제목, D: 조성, E: 이벤트, F: 파일명, G: 이미지 URL, H: 음원(mp3) 링크
+// A: 날짜, B: 장, C: 제목, D: 조성, E: 이벤트, F: 파일명, G: 이미지 URL
 async function requestGviz(queryStr) {
   const query = encodeURIComponent(queryStr);
   const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tq=${query}&sheet=${encodeURIComponent(SHEET_NAME)}`;
@@ -94,7 +95,7 @@ async function fetchSheetData() {
 
   // 1) 이번달·다음달만 먼저 요청 → 도착 즉시 화면 표시
   //    (실패하거나 결과가 없으면 조용히 넘어가고 전체 데이터를 기다림)
-  requestGviz(`SELECT A, B, C, D, E, F, G, H WHERE A >= date '${rangeStart}' AND A < date '${rangeEnd}'`)
+  requestGviz(`SELECT A, B, C, D, E, F, G WHERE A >= date '${rangeStart}' AND A < date '${rangeEnd}'`)
     .then((data) => {
       if (fullLoaded) return; // 전체 데이터가 이미 왔으면 무시
       parseGvizData(data);
@@ -106,7 +107,7 @@ async function fetchSheetData() {
 
   // 2) 전체 데이터는 동시에 요청 → 도착하면 덮어써서 갱신
   try {
-    const data = await requestGviz(`SELECT A, B, C, D, E, F, G, H`);
+    const data = await requestGviz(`SELECT A, B, C, D, E, F, G`);
     fullLoaded = true;
     parseGvizData(data);
     renderAll();
@@ -137,14 +138,16 @@ function parseGvizData(data) {
     const currentDate = parseDateCell(cells[0]);
     if (!currentDate) return;
 
-    // A: 날짜, B: 장, C: 제목, D: 조성, E: 이벤트, F: 파일명, G: 이미지 URL, H: 음원(mp3) 링크
+    // A: 날짜, B: 장, C: 제목, D: 조성, E: 이벤트, F: 파일명, G: 이미지 URL
     let option = cells[1]?.v;
     const title = cells[2]?.v;
     const key = cells[3]?.v;
     const event = cells[4]?.v;
     const imageUrl = cells[6]?.v;
-    const mediaUrl = cells[7]?.v;
     console.log(title, key, event, imageUrl);
+
+    // 음원 파일명 규칙에 쓰기 위해 가공 전 원본 장 값 보관
+    const rawOption = option ? String(option).trim() : "";
 
     // 장 값 처리
     if (option) {
@@ -166,7 +169,7 @@ function parseGvizData(data) {
       key: key || "",
       event: event || "",
       imageUrl: imageUrl || "",
-      mediaUrl: mediaUrl ? String(mediaUrl).trim() : "",
+      track: makeTrackKey(rawOption, String(title).trim()), // 음원 파일명(확장자 제외)
     });
   });
 
@@ -236,6 +239,7 @@ function renderThisWeek() {
 
   if (!songs.length) {
     body.innerHTML = `<p class="empty-this-week">표시할 일정이 없습니다.</p>`;
+    lastThisWeekHtml = "";
     return;
   }
 
@@ -243,9 +247,8 @@ function renderThisWeek() {
   pill.textContent = getPillLabel(d); // ← 추가
   const label = `${d.getMonth() + 1}월 ${d.getDate()}일 (${WEEKDAYS[d.getDay()]})`;
 
-  body.innerHTML = songs
+  const html = songs
     .map((s) => {
-      const embedSrc = getEmbedUrl(s.mediaUrl);
       return `
       <div class="song">
         <div class="this-week-meta">
@@ -259,19 +262,26 @@ function renderThisWeek() {
         <div class="this-week-foot">
           <span class="jang">${esc(s.option)}</span>
           <div class="btns">
-            <button class="paper" data-image="${s.imageUrl}" data-filename="" ${!s.imageUrl ? "disabled" : ""}>
+            <button class="paper" data-image="${esc(s.imageUrl)}" data-filename="" ${!s.imageUrl ? "disabled" : ""}>
               <span alt="paper" class="paper-icon"></span>
               <span class="paper-label">악보</span>
             </button>
-            <button class="play" data-media="${esc(s.mediaUrl)}" ${!embedSrc ? "disabled" : ""}>
-              <img src="./image/play.svg" alt="play" class="play-icon">
-              <span class="play-label">듣기</span>
-            </button>
           </div>
         </div>
+        ${playerBarHTML(s)}
+        ${s.imageUrl ? `<div class="score-inline" hidden></div>` : ""}
       </div>`;
     })
     .join("");
+
+  // 내용이 같으면 다시 그리지 않음 (데이터가 한 번 더 로딩돼도 재생바 상태가 초기화되지 않도록)
+  if (html !== lastThisWeekHtml) {
+    body.innerHTML = html;
+    lastThisWeekHtml = html;
+    probeBars(); // 음원 길이/존재 여부 확인
+  }
+
+  syncPlayButtons(); // 재생 중인 곡이면 일시정지 아이콘 유지
 }
 
 // 월 칩 선택 상태
@@ -295,7 +305,6 @@ function renderMonthChips() {
 // 리스트 한 줄 (좌측엔 일만 표시)
 function itemHTML(s, colorIdx) {
   const cur = s.dateStr === closestDateStr ? " cur" : "";
-  const embedSrc = getEmbedUrl(s.mediaUrl);
   return `
     <div class="item${cur}">
       <span class="day c${colorIdx % 5}">${s.date.getDate()}</span>
@@ -306,7 +315,7 @@ function itemHTML(s, colorIdx) {
             <button type="button" class="paper" aria-label="악보" data-image="${esc(s.imageUrl)}" data-filename="" ${!s.imageUrl ? "disabled" : ""}>
               <span class="paper-icon"></span>
             </button>
-            <button type="button" class="play" aria-label="듣기" data-media="${esc(s.mediaUrl)}" ${!embedSrc ? "disabled" : ""}>
+            <button type="button" class="play" aria-label="듣기" data-track="${esc(s.track)}" ${!s.track ? "disabled" : ""}>
               <img src="./image/play.svg" alt="" class="play-icon">
             </button>
           </div>
@@ -355,6 +364,7 @@ function renderList() {
   }
 
   list.innerHTML = html;
+  syncPlayButtons(); // 재생 중인 곡이면 일시정지 아이콘 유지
 }
 
 function showError(message) {
@@ -437,6 +447,13 @@ document.addEventListener(
     const imageUrl = getDriveImageUrl(button.dataset.image);
     if (!imageUrl) return;
 
+    // 이번주 영역: 팝업 대신 재생바 아래에 악보 표시 (다시 누르면 접힘)
+    const panel = button.closest("#thisWeekBody .song")?.querySelector(".score-inline");
+    if (panel) {
+      toggleInlineScore(button, panel, imageUrl);
+      return;
+    }
+
     const overlay = document.createElement("div");
     overlay.className = "image-overlay";
     overlay.setAttribute("role", "dialog");
@@ -475,129 +492,266 @@ document.addEventListener(
   true,
 );
 
-// 시트 H열 링크 → 재생용 iframe 주소 (유효하지 않으면 "")
-//  1) 구글드라이브 mp3: drive.google.com/file/d/ID/view, open?id=ID, uc?id=ID, 파일 ID 자체 → /file/d/ID/preview
-//  2) 유튜브(기존 데이터 호환): watch?v=ID, youtu.be/ID, embed/ID, shorts/ID, 영상 ID 자체
-// ID는 영문/숫자/_/- 만 허용하므로 iframe 주소에 넣어도 안전함
-function getEmbedUrl(raw) {
-  if (!raw) return "";
-  const str = String(raw).trim();
+/* ---------- 음원(mp3) 재생: ./media 폴더 ---------- */
+const MEDIA_DIR = "./media/";
 
-  const drive = (id) => `https://drive.google.com/file/d/${id}/preview`;
-  const youtube = (id) => `https://www.youtube.com/embed/${id}?autoplay=1&playsinline=1`;
+// 시트 값 → 음원 파일명(확장자 제외)
+//  - B열 "찬송가 123장" → 새찬송가_123장_제목
+//  - B열 "ccm" 또는 빈 값 → ccm_제목
+//  - 그 외 → "" (음원 없음)
+function makeTrackKey(rawOption, title) {
+  if (!title) return "";
+  const opt = String(rawOption || "").trim();
 
-  // ID만 입력된 경우: 유튜브 영상 ID는 11자, 드라이브 파일 ID는 보통 25자 이상
-  if (/^[A-Za-z0-9_-]{11}$/.test(str)) return youtube(str);
-  if (/^[A-Za-z0-9_-]{25,}$/.test(str)) return drive(str);
-
-  // 구글드라이브 링크
-  if (/(?:drive|docs)\.google\.com/i.test(str)) {
-    const m = str.match(/\/d\/([A-Za-z0-9_-]+)/) || str.match(/[?&]id=([A-Za-z0-9_-]+)/);
-    return m ? drive(m[1]) : "";
+  if (opt.startsWith("찬송가")) {
+    const num = opt.match(/\d+/);
+    return num ? `새찬송가_${num[0]}장_${title}` : `새찬송가_${title}`;
   }
-
-  // 유튜브 링크
-  const patterns = [/[?&]v=([A-Za-z0-9_-]{11})/, /youtu\.be\/([A-Za-z0-9_-]{11})/, /youtube\.com\/embed\/([A-Za-z0-9_-]{11})/, /youtube\.com\/shorts\/([A-Za-z0-9_-]{11})/];
-  for (const pattern of patterns) {
-    const match = str.match(pattern);
-    if (match) return youtube(match[1]);
-  }
-
+  if (opt === "" || opt.toLowerCase() === "ccm") return `ccm_${title}`;
   return "";
 }
 
-// "듣기" 버튼 클릭 → 데이터 사용 안내 팝업 → 확인 시 iframe 플레이어 팝업
+// 파일명 → 재생 주소 후보
+// macOS에서 만든 한글 파일명은 자모가 분리된(NFD) 형태로 저장될 수 있어 NFC/NFD 두 가지를 모두 시도
+function getMediaUrls(key) {
+  if (!key) return [];
+  const names = [...new Set([key.normalize("NFC"), key.normalize("NFD")])];
+  return names.map((n) => `${MEDIA_DIR}${encodeURIComponent(n)}.mp3`);
+}
+
+const PLAY_ICON = "./image/play.svg";
+const PAUSE_ICON = "./image/pause.svg";
+new Image().src = PAUSE_ICON; // 아이콘 전환 시 깜빡임 방지
+
+const player = new Audio(); // 한 번에 한 곡만 재생
+player.preload = "none";
+let currentKey = ""; // 재생 중이거나 일시정지된 곡의 파일명
+let currentTry = 0; // 주소 후보 중 시도 중인 순번
+const durations = {}; // 파일명 → 길이(초)
+const urlIndex = {}; // 파일명 → 실제로 열린 주소 후보 순번
+const missing = {}; // 파일명 → 음원 파일 없음
+
+// 초 → m:ss
+function fmtTime(sec) {
+  if (!isFinite(sec) || sec < 0) sec = 0;
+  const t = Math.floor(sec);
+  return `${Math.floor(t / 60)}:${pad(t % 60)}`;
+}
+
+// 이번주 영역 재생바 (진행 막대 + 경과/남은 시간 + 원형 재생 버튼)
+function playerBarHTML(s) {
+  if (!s.track) return "";
+  return `
+        <div class="pbar" data-track="${esc(s.track)}">
+          <div class="pb-main">
+            <div class="pb-track" role="slider" tabindex="0" aria-label="재생 위치" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <span class="pb-fill"></span>
+              <span class="pb-thumb"></span>
+            </div>
+            <div class="pb-times"><span class="pb-cur">0:00</span><span class="pb-rem">-0:00</span></div>
+          </div>
+          <button type="button" class="pb-toggle" aria-label="듣기">
+            <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13L19 12z"/></svg>
+            <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>
+          </button>
+        </div>`;
+}
+
+// 이번주 재생바의 음원 길이/존재 여부 미리 확인 (파일이 없으면 비활성 표시)
+function probeBars() {
+  document.querySelectorAll(".pbar").forEach((bar) => probeTrack(bar.dataset.track));
+}
+
+function probeTrack(key) {
+  if (!key || key in durations || missing[key]) return;
+
+  const urls = getMediaUrls(key);
+  let i = 0;
+  const probe = new Audio();
+  probe.preload = "metadata";
+
+  const next = () => {
+    if (i >= urls.length) {
+      missing[key] = true;
+      syncPlayButtons();
+      return;
+    }
+    probe.src = urls[i++];
+  };
+
+  probe.addEventListener("loadedmetadata", () => {
+    durations[key] = probe.duration;
+    urlIndex[key] = i - 1;
+    probe.removeAttribute("src");
+    updateBars();
+  });
+  probe.addEventListener("error", next);
+  next();
+}
+
+// 재생 버튼(목록 아이콘 / 재생바 원형 버튼) 클릭 → 바로 재생, 다시 누르면 일시정지
 document.addEventListener(
   "click",
   (e) => {
-    const button = e.target.closest(".play");
+    const button = e.target.closest(".play, .pb-toggle");
     if (!button || button.disabled) return;
 
     e.stopPropagation();
 
-    const src = getEmbedUrl(button.dataset.media);
-    if (!src) return;
+    const key = button.classList.contains("pb-toggle") ? button.closest(".pbar")?.dataset.track : button.dataset.track;
+    if (!key) return;
 
-    showPlayConfirm(src);
+    togglePlay(key);
   },
   true,
 );
 
-// 재생 전 데이터 사용 안내 확인창
-function showPlayConfirm(src) {
-  const overlay = document.createElement("div");
-  overlay.className = "overlay";
-  overlay.setAttribute("role", "dialog");
-  overlay.setAttribute("aria-modal", "true");
-  overlay.innerHTML = `
-    <div class="box confirm">
-      <p>음원이 재생됩니다.<br>데이터 사용에 주의해주세요.</p>
-      <div class="row">
-        <button type="button" class="confirm-cancel">취소</button>
-        <button type="button" class="confirm-ok ok">확인</button>
-      </div>
-    </div>`;
-
-  const onKey = (ev) => {
-    if (ev.key === "Escape") close();
-  };
-  const close = () => {
-    overlay.remove();
-    document.removeEventListener("keydown", onKey);
-  };
-
-  overlay.addEventListener("click", (ev) => {
-    ev.stopPropagation();
-
-    if (ev.target.closest(".confirm-ok")) {
-      close();
-      openPlayerOverlay(src);
-      return;
-    }
-    // 취소 버튼이거나 바깥(배경) 클릭 시 닫기
-    if (ev.target.closest(".confirm-cancel") || !ev.target.closest(".box")) {
-      close();
-    }
-  });
-
-  document.addEventListener("keydown", onKey);
-  document.body.appendChild(overlay);
+function togglePlay(key) {
+  // 같은 곡: 재생 ↔ 일시정지
+  if (currentKey === key) {
+    if (player.paused) startPlay();
+    else player.pause();
+    return;
+  }
+  // 다른 곡: 기존 재생을 멈추고 새로 재생
+  currentKey = key;
+  currentTry = urlIndex[key] ?? 0;
+  player.src = getMediaUrls(key)[currentTry];
+  startPlay();
 }
 
-// iframe 플레이어 팝업 (드라이브 mp3 미리보기 / 유튜브)
-function openPlayerOverlay(src) {
-  const overlay = document.createElement("div");
-  overlay.className = "overlay";
-  overlay.setAttribute("role", "dialog");
-  overlay.setAttribute("aria-modal", "true");
-  overlay.innerHTML = `
-    <div class="box player">
-      <iframe
-        src="${esc(src)}"
-        title="음원 플레이어"
-        allow="autoplay; encrypted-media; picture-in-picture"
-        referrerpolicy="strict-origin-when-cross-origin"
-        allowfullscreen></iframe>
-    </div>`;
+function startPlay() {
+  const promise = player.play();
+  syncPlayButtons();
+  if (promise) {
+    // 파일 오류(NotSupported 등)는 error 이벤트에서 처리. 여기서는 재생 차단만 처리
+    promise.catch((err) => {
+      if (err.name === "NotAllowedError") syncPlayButtons();
+    });
+  }
+}
 
-  const onKey = (ev) => {
-    if (ev.key === "Escape") close();
-  };
-  // overlay를 제거하면 iframe도 함께 사라져 재생이 멈춤
-  const close = () => {
-    overlay.remove();
-    document.body.style.overflow = "";
-    document.removeEventListener("keydown", onKey);
-  };
+// 음원을 열 수 없을 때: 다음 주소 후보(NFC↔NFD)를 시도하고, 모두 실패하면 "음원 없음" 처리
+function onPlayFailed() {
+  if (!currentKey) return;
 
-  // 플레이어 바깥(어두운 배경) 클릭 → 닫기
-  overlay.addEventListener("click", (ev) => {
-    if (!ev.target.closest(".box")) close();
+  const urls = getMediaUrls(currentKey);
+  if (currentTry + 1 < urls.length) {
+    currentTry += 1;
+    player.src = urls[currentTry];
+    startPlay();
+    return;
+  }
+
+  console.warn("음원을 재생할 수 없습니다:", currentKey);
+  missing[currentKey] = true;
+  currentKey = "";
+  player.removeAttribute("src");
+  player.load();
+  syncPlayButtons();
+}
+
+// 이번주 영역 재생바 갱신 (진행 막대, 시간, 재생/일시정지 아이콘)
+function updateBars() {
+  document.querySelectorAll(".pbar").forEach((bar) => {
+    const key = bar.dataset.track;
+    const isThis = key === currentKey;
+    const playing = isThis && !player.paused;
+    const dur = isThis && isFinite(player.duration) && player.duration > 0 ? player.duration : durations[key] || 0;
+    const cur = isThis ? player.currentTime : 0;
+    const ratio = dur ? Math.min(Math.max(cur / dur, 0), 1) : 0;
+
+    bar.style.setProperty("--p", `${(ratio * 100).toFixed(2)}%`);
+    bar.classList.toggle("playing", playing);
+    bar.classList.toggle("unavailable", !!missing[key]);
+    bar.querySelector(".pb-cur").textContent = fmtTime(cur);
+    bar.querySelector(".pb-rem").textContent = `-${fmtTime(dur - cur)}`;
+    bar.querySelector(".pb-track").setAttribute("aria-valuenow", Math.round(ratio * 100));
+
+    const toggle = bar.querySelector(".pb-toggle");
+    toggle.disabled = !!missing[key];
+    toggle.setAttribute("aria-label", playing ? "일시정지" : "듣기");
+  });
+}
+
+// 모든 재생 버튼/재생바를 현재 재생 상태에 맞춤 (같은 곡이 이번주 영역과 목록에 함께 있어도 같이 변경)
+function syncPlayButtons() {
+  const playing = !!currentKey && !player.paused;
+
+  document.querySelectorAll(".play").forEach((btn) => {
+    const key = btn.dataset.track;
+    const isThis = playing && key === currentKey;
+
+    btn.disabled = !key || !!missing[key];
+    btn.classList.toggle("playing", isThis);
+    btn.setAttribute("aria-label", isThis ? "일시정지" : "듣기");
+
+    const icon = btn.querySelector(".play-icon");
+    const nextSrc = isThis ? PAUSE_ICON : PLAY_ICON;
+    if (icon && icon.getAttribute("src") !== nextSrc) icon.setAttribute("src", nextSrc);
   });
 
-  document.addEventListener("keydown", onKey);
-  document.body.style.overflow = "hidden"; // 뒤 화면 스크롤 방지
-  document.body.appendChild(overlay);
+  updateBars();
+}
+
+player.addEventListener("play", syncPlayButtons);
+player.addEventListener("pause", syncPlayButtons);
+player.addEventListener("ended", syncPlayButtons);
+player.addEventListener("timeupdate", updateBars);
+player.addEventListener("durationchange", updateBars);
+player.addEventListener("error", onPlayFailed);
+
+// 재생바 위치 이동 (클릭/드래그). 재생을 시작한 곡만 이동 가능
+let seekingTrack = null;
+
+function seekFromPointer(track, e) {
+  const key = track.closest(".pbar").dataset.track;
+  if (key !== currentKey || !isFinite(player.duration) || !player.duration) return;
+
+  const rect = track.getBoundingClientRect();
+  const ratio = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
+  player.currentTime = ratio * player.duration;
+  updateBars();
+}
+
+document.addEventListener("pointerdown", (e) => {
+  const track = e.target.closest(".pb-track");
+  if (!track) return;
+  seekingTrack = track;
+  if (track.setPointerCapture) track.setPointerCapture(e.pointerId);
+  seekFromPointer(track, e);
+});
+document.addEventListener("pointermove", (e) => {
+  if (seekingTrack) seekFromPointer(seekingTrack, e);
+});
+["pointerup", "pointercancel"].forEach((type) => document.addEventListener(type, () => (seekingTrack = null)));
+
+// 키보드: 재생바에서 ←/→ 로 5초 이동
+document.addEventListener("keydown", (e) => {
+  const track = e.target.closest && e.target.closest(".pb-track");
+  if (!track || (e.key !== "ArrowLeft" && e.key !== "ArrowRight")) return;
+  if (track.closest(".pbar").dataset.track !== currentKey || !isFinite(player.duration)) return;
+
+  e.preventDefault();
+  const next = player.currentTime + (e.key === "ArrowRight" ? 5 : -5);
+  player.currentTime = Math.min(Math.max(next, 0), player.duration);
+  updateBars();
+});
+
+// 이번주 영역 악보: 처음 열 때 이미지를 불러오고, 이후에는 보이기/숨기기만 전환
+function toggleInlineScore(button, panel, imageUrl) {
+  const opening = panel.hidden;
+
+  if (opening && !panel.firstChild) {
+    const img = document.createElement("img");
+    img.alt = "악보";
+    img.src = imageUrl;
+    panel.appendChild(img);
+  }
+
+  panel.hidden = !opening;
+  button.classList.toggle("on", opening);
+  button.setAttribute("aria-expanded", String(opening));
 }
 
 //

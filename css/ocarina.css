@@ -346,6 +346,7 @@ a {
   box-shadow: 0 -4px 20px rgba(15, 27, 61, 0.06);
   padding: 14px 0 calc(12px + env(safe-area-inset-bottom));
   padding: 14px 0;
+  z-index: 100;
 }
 .tab {
   display: flex;
@@ -549,7 +550,7 @@ button.play {
   padding: 4px 8px;
   /* background-color: #fff; */
   border-radius: 4px;
-  /* border: 1px solid var(--color); */
+  border: 1px solid var(--color);
   color: var(--color);
   &:disabled {
     border-color: #aaa;
@@ -653,4 +654,115 @@ button .play-icon {
 .item button.paper,
 .item button.play {
   padding: 4px 6px;
+}
+
+/* 이번주 영역: 재생바 */
+.pbar {
+  --p: 0%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+}
+.pb-main {
+  flex: 1;
+  min-width: 0;
+}
+.pb-track {
+  position: relative;
+  height: 28px;
+  cursor: pointer;
+  touch-action: none; /* 드래그 중 화면 스크롤 방지 */
+}
+.pb-track::before {
+  /* 전체 길이 (얇은 선) */
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  transform: translateY(-50%);
+  border-radius: 2px;
+  background: var(--ink);
+}
+.pb-fill {
+  /* 재생된 구간 (굵은 선) */
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: var(--p);
+  height: 5px;
+  transform: translateY(-50%);
+  border-radius: 5px;
+  background: var(--ink);
+}
+.pb-thumb {
+  position: absolute;
+  top: 50%;
+  left: var(--p);
+  width: 16px;
+  height: 16px;
+  transform: translate(-50%, -50%);
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  background: #fff;
+}
+.pb-times {
+  display: flex;
+  justify-content: space-between;
+  margin-top: -2px;
+  font-size: 12px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.pb-toggle {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  color: var(--ink);
+}
+.pb-toggle svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+.pb-toggle .i-pause,
+.pbar.playing .pb-toggle .i-play {
+  display: none;
+}
+.pbar.playing .pb-toggle .i-pause {
+  display: block;
+}
+.pbar.unavailable {
+  opacity: 0.35;
+}
+.pbar.unavailable .pb-track {
+  pointer-events: none;
+}
+.pb-toggle:disabled {
+  cursor: default;
+}
+
+/* 이번주 영역: 재생바 아래 악보 */
+.score-inline {
+  margin-top: 16px;
+}
+.score-inline[hidden] {
+  display: none;
+}
+.score-inline img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+button.paper.on {
+  background: rgba(74, 114, 206, 0.1);
 }
