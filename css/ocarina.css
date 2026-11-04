@@ -663,10 +663,6 @@ button .play-icon {
   position: relative;
   z-index: 1; /* 현재 주 하이라이트(.item.cur::after) 위로 */
 }
-.item button.paper,
-.item button.play {
-  padding: 4px 6px;
-}
 
 /* 이번주 영역: 재생바 */
 .pbar {
@@ -740,8 +736,8 @@ button .play-icon {
   background: var(--color);
   color: #fff;
 }
-.pbar:not(.ready) .pb-toggle {
-  background: #d9d9d9; /* 길이를 불러오기 전 / 음원 없음 */
+.pbar.unavailable .pb-toggle {
+  background: #d9d9d9; /* 음원 없음 */
 }
 .pb-toggle svg {
   width: 20px;
@@ -844,5 +840,156 @@ button.paper.on {
   display: flex;
   align-items: center;
   gap: 6px;
+  color: var(--sub);
+}
+
+/* 목록: 클릭 가능한 항목 + 악보/음원 보유 표시 아이콘 (버튼 아님) */
+.item {
+  cursor: pointer;
+}
+.ind {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 3px;
+}
+.ind .paper-icon {
+  display: block;
+  width: 20px;
+  height: 16px;
+  background: url(../image/paper.svg) center / contain no-repeat;
+}
+.ind .play-icon {
+  display: block;
+  width: 20px;
+  height: 16px;
+  object-fit: contain;
+}
+.ind:not(.on) .paper-icon,
+.ind:not(.on) .play-icon {
+  filter: grayscale(100%);
+  opacity: 0.3;
+}
+
+/* 곡 상세 팝업 */
+.song-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  padding: 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: rgba(10, 16, 32, 0.6);
+}
+.song-card {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  margin: auto; /* 짧으면 가운데, 길면 스크롤 */
+  padding: 44px 28px 28px;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 12px 32px rgba(15, 27, 61, 0.25);
+}
+.song-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--sub);
+}
+.song-close:hover {
+  background: var(--chip);
+}
+.sc-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 17px;
+}
+.sc-date {
+  color: #555;
+}
+.sc-event {
+  color: var(--red);
+  text-align: right;
+}
+.sc-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+  font-size: 18px;
+}
+.sc-key {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.sc-title {
+  margin-top: 6px;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  word-break: keep-all;
+}
+.sc-player {
+  margin-top: 20px;
+  padding: 10px 22px 10px 10px;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+}
+.sc-score {
+  /* 불러오는 동안만 A4 자리를 잡아두고, 로딩이 끝나면 악보 원본 비율로 표시 */
+  position: relative;
+  margin-top: 20px;
+  aspect-ratio: 1 / 1.4142;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #f3f5f9;
+}
+.sc-score:not(.loaded):not(.failed)::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
+  border: 3px solid var(--chip);
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+.sc-score img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.sc-score.loaded {
+  aspect-ratio: auto;
+  background: none;
+  border: 1px solid var(--line);
+}
+.sc-score.loaded img {
+  height: auto;
+  opacity: 1;
+}
+.sc-score.failed {
+  aspect-ratio: auto;
+  padding: 36px 16px;
+  text-align: center;
+  font-size: 14px;
   color: var(--sub);
 }

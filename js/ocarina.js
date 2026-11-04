@@ -175,6 +175,7 @@ function parseGvizData(data) {
   });
 
   allData.sort((a, b) => a.date - b.date);
+  allData.forEach((d, i) => (d.id = i)); // 목록 항목 → 상세 팝업 연결용
   closestDateStr = findClosestDateStr();
 
   // 시트에 존재하는 연도 목록
@@ -325,22 +326,21 @@ function renderMonthChips() {
   document.getElementById("this-week").hidden = isAll;
 }
 
-// 리스트 한 줄 (좌측엔 일만 표시)
+// 리스트 한 줄 (좌측엔 일만 표시). 클릭하면 곡 상세 팝업
+// 제목 옆 아이콘은 버튼이 아니라 악보/음원 보유 여부 표시용 (있으면 색, 없으면 회색)
 function itemHTML(s, colorIdx) {
   const cur = s.dateStr === closestDateStr ? " cur" : "";
+  const hasScore = !!s.imageUrl;
+  const hasAudio = mediaState[s.track] === true;
   return `
-    <div class="item${cur}">
+    <div class="item${cur}" role="button" tabindex="0" aria-haspopup="dialog" data-id="${s.id}">
       <span class="day c${colorIdx % 5}">${s.date.getDate()}</span>
       <div class="txt">
         <div class="title-row">
           <b>${esc(s.title)}</b>
           <div class="btns">
-            <button type="button" class="paper" aria-label="악보" data-image="${esc(s.imageUrl)}" data-filename="" ${!s.imageUrl ? "disabled" : ""}>
-              <span class="paper-icon"></span>
-            </button>
-            <button type="button" class="play" aria-label="듣기" data-track="${esc(s.track)}" ${!s.track ? "disabled" : ""}>
-              <img src="./image/play.svg" alt="" class="play-icon">
-            </button>
+            <span class="ind ind-score${hasScore ? " on" : ""}" title="${hasScore ? "악보 있음" : "악보 없음"}"><span class="paper-icon"></span></span>
+            <span class="ind ind-audio${hasAudio ? " on" : ""}" data-track="${esc(s.track)}" title="${hasAudio ? "음원 있음" : "음원 없음"}"><img src="./image/play.svg" alt="" class="play-icon"></span>
           </div>
         </div>
         <div class="row wrap-sb">
@@ -387,7 +387,8 @@ function renderList() {
   }
 
   list.innerHTML = html;
-  syncPlayButtons(); // 재생 중인 곡이면 일시정지 아이콘 유지
+  syncPlayButtons(); // 재생 중인 곡이면 재생바 상태 유지
+  checkListMedia(); // 목록 음원 아이콘(있음/없음) 확인
 }
 
 function showError(message) {
@@ -439,6 +440,20 @@ function bindEvents() {
       renderList();
     });
   });
+
+  // 목록 항목 클릭(또는 Enter/Space) → 곡 상세 팝업
+  const monthList = document.getElementById("monthList");
+  monthList.addEventListener("click", (e) => {
+    const item = e.target.closest(".item");
+    if (item) openSongModal(+item.dataset.id);
+  });
+  monthList.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const item = e.target.closest(".item");
+    if (!item) return;
+    e.preventDefault();
+    openSongModal(+item.dataset.id);
+  });
 }
 
 // 오늘 날짜 표시
@@ -458,7 +473,7 @@ bindEvents();
 renderMonthChips();
 fetchSheetData();
 
-// 악보 버튼 클릭 시 이미지 팝업 표시
+// 이번주 영역 악보 버튼 → 재생바 아래에 악보 표시 (다시 누르면 접힘)
 // 캡처 단계에서 등록: 다른 클릭 리스너보다 먼저 가로채기 위함
 document.addEventListener(
   "click",
@@ -469,49 +484,8 @@ document.addEventListener(
     e.stopPropagation();
 
     const imageUrl = getDriveImageUrl(button.dataset.image);
-    if (!imageUrl) return;
-
-    // 이번주 영역: 팝업 대신 재생바 아래에 악보 표시 (다시 누르면 접힘)
     const panel = button.closest("#thisWeekBody .song")?.querySelector(".score-inline");
-    if (panel) {
-      toggleInlineScore(button, panel, imageUrl);
-      return;
-    }
-
-    const overlay = document.createElement("div");
-    overlay.className = "image-overlay";
-    overlay.setAttribute("role", "dialog");
-    overlay.setAttribute("aria-modal", "true");
-    overlay.innerHTML = `
-      <div class="image-popup">
-        <button type="button" class="image-close" aria-label="닫기">
-          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-            <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
-          </svg>
-        </button>
-        <img src="${esc(imageUrl)}" alt="악보">
-      </div>`;
-
-    const onKey = (ev) => {
-      if (ev.key === "Escape") close();
-    };
-    const close = () => {
-      overlay.remove();
-      document.body.style.overflow = "";
-      document.removeEventListener("keydown", onKey);
-    };
-
-    // X 버튼 클릭 → 닫기
-    overlay.querySelector(".image-close").addEventListener("click", close);
-    // 팝업 바깥(어두운 배경) 클릭 → 닫기
-    overlay.addEventListener("click", (ev) => {
-      if (ev.target === overlay) close();
-    });
-    // ESC 키 → 닫기
-    document.addEventListener("keydown", onKey);
-
-    document.body.style.overflow = "hidden"; // 뒤 화면 스크롤 방지
-    document.body.appendChild(overlay);
+    if (imageUrl && panel) toggleInlineScore(button, panel, imageUrl);
   },
   true,
 );
@@ -542,10 +516,6 @@ function getMediaUrls(key) {
   const names = [...new Set([key.normalize("NFC"), key.normalize("NFD")])];
   return names.map((n) => `${MEDIA_DIR}${encodeURIComponent(n)}.mp3`);
 }
-
-const PLAY_ICON = "./image/play.svg";
-const PAUSE_ICON = "./image/pause.svg";
-new Image().src = PAUSE_ICON; // 아이콘 전환 시 깜빡임 방지
 
 const player = new Audio(); // 한 번에 한 곡만 재생
 player.preload = "none";
@@ -614,16 +584,16 @@ function probeTrack(key) {
   next();
 }
 
-// 재생 버튼(목록 아이콘 / 재생바 원형 버튼) 클릭 → 바로 재생, 다시 누르면 일시정지
+// 재생바 원형 버튼 클릭 → 바로 재생, 다시 누르면 일시정지
 document.addEventListener(
   "click",
   (e) => {
-    const button = e.target.closest(".play, .pb-toggle");
+    const button = e.target.closest(".pb-toggle");
     if (!button || button.disabled) return;
 
     e.stopPropagation();
 
-    const key = button.classList.contains("pb-toggle") ? button.closest(".pbar")?.dataset.track : button.dataset.track;
+    const key = button.closest(".pbar")?.dataset.track;
     if (!key) return;
 
     togglePlay(key);
@@ -700,23 +670,8 @@ function updateBars() {
   });
 }
 
-// 모든 재생 버튼/재생바를 현재 재생 상태에 맞춤 (같은 곡이 이번주 영역과 목록에 함께 있어도 같이 변경)
+// 재생바를 현재 재생 상태에 맞춤 (같은 곡의 재생바가 이번주 영역과 팝업에 함께 있어도 같이 변경)
 function syncPlayButtons() {
-  const playing = !!currentKey && !player.paused;
-
-  document.querySelectorAll(".play").forEach((btn) => {
-    const key = btn.dataset.track;
-    const isThis = playing && key === currentKey;
-
-    btn.disabled = !key || !!missing[key];
-    btn.classList.toggle("playing", isThis);
-    btn.setAttribute("aria-label", isThis ? "일시정지" : "듣기");
-
-    const icon = btn.querySelector(".play-icon");
-    const nextSrc = isThis ? PAUSE_ICON : PLAY_ICON;
-    if (icon && icon.getAttribute("src") !== nextSrc) icon.setAttribute("src", nextSrc);
-  });
-
   updateBars();
 }
 
@@ -781,6 +736,150 @@ function toggleInlineScore(button, panel, imageUrl) {
 
   const label = button.querySelector(".paper-label");
   if (label) label.textContent = opening ? "악보 접기" : "악보 보기";
+}
+
+/* ---------- 목록: 음원 있음/없음 확인 ---------- */
+const mediaState = {}; // 파일명 → 음원 파일 존재 여부 (확인된 것만 저장)
+const mediaChecking = {}; // 확인 중인 요청 (중복 방지)
+
+// 음원 파일 존재 여부 확인 (HEAD 요청: 파일 내용은 받지 않음)
+// 네트워크 오류면 결과를 저장하지 않아 다음에 다시 확인
+function mediaExists(key) {
+  if (key in mediaState) return Promise.resolve(mediaState[key]);
+
+  if (!mediaChecking[key]) {
+    mediaChecking[key] = (async () => {
+      let networkError = false;
+      for (const url of getMediaUrls(key)) {
+        try {
+          const res = await fetch(url, { method: "HEAD" });
+          if (res.ok) {
+            mediaState[key] = true;
+            return true;
+          }
+        } catch (err) {
+          networkError = true;
+        }
+      }
+      if (!networkError) {
+        mediaState[key] = false;
+        missing[key] = true; // 재생바도 "음원 없음" 표시
+      }
+      return false;
+    })().finally(() => delete mediaChecking[key]);
+  }
+  return mediaChecking[key];
+}
+
+// 화면에 보이는 목록 항목의 음원 아이콘 갱신
+function updateListIcons() {
+  document.querySelectorAll(".ind-audio").forEach((el) => {
+    const on = mediaState[el.dataset.track] === true;
+    el.classList.toggle("on", on);
+    el.setAttribute("title", on ? "음원 있음" : "음원 없음");
+  });
+}
+
+// 아직 확인하지 않은 곡만 6개씩 나눠서 확인
+async function checkListMedia() {
+  const keys = [...new Set([...document.querySelectorAll(".ind-audio")].map((el) => el.dataset.track))].filter((k) => k && !(k in mediaState));
+  let i = 0;
+
+  const worker = async () => {
+    while (i < keys.length) {
+      await mediaExists(keys[i++]);
+      updateListIcons();
+      updateBars();
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(6, keys.length) }, worker));
+}
+
+/* ---------- 곡 상세 팝업 (월별/전체 목록 항목 클릭) ---------- */
+// "26년 11월 15일 일요일"
+function songDateLabel(d) {
+  return `${String(d.getFullYear()).slice(2)}년 ${d.getMonth() + 1}월 ${d.getDate()}일 ${WEEKDAYS[d.getDay()]}요일`;
+}
+
+// 팝업 조성: 조표 아이콘 + "(E키)"
+function keyModalHTML(key) {
+  const k = String(key || "").trim();
+  if (!k) return "";
+  return `<span class="key ${esc(k)}"></span><span>(${esc(k.charAt(0).toUpperCase())}키)</span>`;
+}
+
+function openSongModal(id) {
+  const s = allData.find((d) => d.id === id);
+  if (!s) return;
+
+  const opener = document.activeElement;
+  const key = s.track;
+  const wasPlaying = !!key && currentKey === key && !player.paused; // 열 때 이미 재생 중이었는지
+  const imgUrl = getDriveImageUrl(s.imageUrl);
+
+  const overlay = document.createElement("div");
+  overlay.className = "song-modal";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
+  overlay.setAttribute("aria-label", s.title);
+  overlay.innerHTML = `
+    <div class="song-card">
+      <button type="button" class="song-close" aria-label="닫기">
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
+        </svg>
+      </button>
+      <div class="sc-top">
+        <span class="sc-date">${songDateLabel(s.date)}</span>
+        ${s.event ? `<span class="sc-event">${esc(s.event)}</span>` : ""}
+      </div>
+      <div class="sc-meta">
+        <span>${esc(getOptionLabel(s))}</span>
+        <span class="sc-key">${keyModalHTML(s.key)}</span>
+      </div>
+      <h2 class="sc-title">${esc(s.title)}</h2>
+      ${key ? `<div class="sc-player">${playerBarHTML(s)}</div>` : ""}
+      ${imgUrl ? `<div class="sc-score"><img src="${esc(imgUrl)}" alt="악보"></div>` : ""}
+    </div>`;
+
+  const onKey = (ev) => {
+    if (ev.key === "Escape") close();
+  };
+  const close = () => {
+    overlay.remove();
+    document.body.style.overflow = "";
+    document.removeEventListener("keydown", onKey);
+    // 팝업 안에서 재생을 시작했다면 닫을 때 멈춤 (열기 전부터 재생 중이던 곡은 유지)
+    if (key && !wasPlaying && currentKey === key && !player.paused) player.pause();
+    if (opener && opener.focus) opener.focus();
+  };
+
+  // X 버튼 / 바깥(어두운 배경) 클릭 → 닫기
+  overlay.addEventListener("click", (ev) => {
+    if (ev.target === overlay || ev.target.closest(".song-close")) close();
+  });
+  document.addEventListener("keydown", onKey);
+
+  document.body.style.overflow = "hidden"; // 뒤 화면 스크롤 방지
+  document.body.appendChild(overlay);
+  overlay.querySelector(".song-close").focus();
+
+  // 악보 이미지: 불러오면 원본 비율로 표시, 실패하면 안내 문구
+  const scoreBox = overlay.querySelector(".sc-score");
+  if (scoreBox) {
+    const img = scoreBox.querySelector("img");
+    const done = () => scoreBox.classList.add("loaded");
+    const fail = () => {
+      scoreBox.classList.add("failed");
+      scoreBox.textContent = "악보를 불러오지 못했습니다.";
+    };
+    img.addEventListener("load", done);
+    img.addEventListener("error", fail);
+    if (img.complete) (img.naturalWidth ? done : fail)(); // 캐시에서 바로 불러온 경우
+  }
+
+  probeBars(); // 음원 길이/존재 여부 확인
+  syncPlayButtons(); // 현재 재생 상태 반영
 }
 
 //
