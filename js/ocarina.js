@@ -244,7 +244,7 @@ function getOptionLabel(s) {
 function keyHTML(key) {
   const k = String(key || "").trim();
   if (!k) return "";
-  return `<span class="tw-key-text">${esc(k.charAt(0).toUpperCase())}키</span><span class="key ${esc(k)}"></span>`;
+  return `<span class="key ${esc(k)}"></span><span class="tw-key-text">(${esc(k.charAt(0).toUpperCase())}키)</span>`;
 }
 
 // 이번주 영역: 오늘과 가장 가까운 날짜 → 월/일/요일
@@ -267,7 +267,7 @@ function renderThisWeek() {
   // 날짜 영역: 큰 일(日) + 월·요일 + 이벤트
   const head = `
       <div class="tw-head">
-        <span class="tw-day">${d.getDate()}</span>
+        <span class="tw-day">${d.getDate()}<span class="tw-day-text">일</span></span>
         <div class="tw-date">
           <span class="tw-md">${monthWeek}</span>
           ${event ? `<span class="tw-event">${esc(event)}</span>` : ""}

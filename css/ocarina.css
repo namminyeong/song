@@ -49,7 +49,8 @@ a {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: calc(18px + env(safe-area-inset-top)) 4px 14px;
+  /* padding: calc(18px + env(safe-area-inset-top)) 4px 14px; */
+  padding: 32px 4px 20px;
 }
 .top svg {
   width: 32px;
@@ -61,7 +62,7 @@ a {
   letter-spacing: -0.02em;
 }
 #today {
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 400;
 }
 .calendar {
@@ -671,7 +672,7 @@ button .play-icon {
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 20px;
 }
 .pb-main {
   flex: 1;
@@ -714,7 +715,7 @@ button .play-icon {
   width: 20px;
   height: 20px;
   transform: translate(-50%, -50%);
-  border: 3px solid var(--ink);
+  border: 3px solid var(--color);
   border-radius: 50%;
   background: #fff;
 }
@@ -793,6 +794,7 @@ button.paper.on {
   align-self: stretch;
   display: flex;
   align-items: center;
+  gap: 4px;
   padding-right: 14px;
   border-right: 1px solid #d9dde6;
   font-size: 38px;
@@ -800,12 +802,17 @@ button.paper.on {
   line-height: 1;
   color: var(--color);
 }
+.tw-day-text {
+  margin-top: 12px;
+}
+
 .tw-date {
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
 }
+.tw-day-text,
 .tw-md {
   font-size: 16px;
   color: var(--sub);
@@ -820,8 +827,8 @@ button.paper.on {
 .tw-player {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-top: 22px;
+  gap: 20px;
+  margin-top: 20px;
   padding-top: 20px;
   border-top: 1px solid var(--tw-line);
 }
@@ -992,4 +999,7 @@ button.paper.on {
   text-align: center;
   font-size: 14px;
   color: var(--sub);
+}
+.tw-key-text {
+  font-size: 16px;
 }
