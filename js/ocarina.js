@@ -166,6 +166,7 @@ function parseGvizData(data) {
       dateStr: toDateStr(currentDate),
       title: String(title).trim(),
       option: option || "",
+      rawOption, // 가공 전 원본 장 값 (이번주 카드 표시용)
       key: key || "",
       event: event || "",
       imageUrl: imageUrl || "",
@@ -219,16 +220,30 @@ function getPillLabel(target) {
   const base = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const t = new Date(target.getFullYear(), target.getMonth(), target.getDate());
 
-  // 4) 오늘
+  // 오늘
   if (t.getTime() === base.getTime()) return "오늘";
 
-  // 1) 다음달 (12월 → 1월처럼 연도가 넘어가는 경우도 처리)
+  // 다음달 (12월 → 1월처럼 연도가 넘어가는 경우도 처리)
   const monthDiff = (t.getFullYear() - base.getFullYear()) * 12 + (t.getMonth() - base.getMonth());
   if (monthDiff >= 1) return "다음달";
 
-  // 2), 3) 같은 달: 7일 이상이면 다음주, 미만이면 이번주
+  // 같은 달: 7일 이상이면 다음주, 미만이면 이번주
   const dayDiff = Math.round((t - base) / 86400000);
   return dayDiff >= 7 ? "다음주" : "이번주";
+}
+
+// 장 표시: "찬송가 589장" / ccm·빈 값은 "CCM"
+function getOptionLabel(s) {
+  const opt = String(s.rawOption || "").trim();
+  if (!opt || opt.toLowerCase() === "ccm") return "CCM";
+  return opt.replace(/^찬송가\s*/, "찬송가 ");
+}
+
+// 조성 표시: 왼쪽에 문자("Eb" → "E키"), 오른쪽에 기존 조표 아이콘(.key)
+function keyHTML(key) {
+  const k = String(key || "").trim();
+  if (!k) return "";
+  return `<span class="tw-key-text">${esc(k.charAt(0).toUpperCase())}키</span><span class="key ${esc(k)}"></span>`;
 }
 
 // 이번주 영역: 오늘과 가장 가까운 날짜 → 월/일/요일
@@ -244,35 +259,43 @@ function renderThisWeek() {
   }
 
   const d = songs[0].date;
-  pill.textContent = getPillLabel(d); // ← 추가
-  const label = `${d.getMonth() + 1}월 ${d.getDate()}일 (${WEEKDAYS[d.getDay()]})`;
+  pill.textContent = getPillLabel(d);
+  const monthWeek = `${d.getMonth() + 1}월 • ${WEEKDAYS[d.getDay()]}요일`;
+  const event = (songs.find((x) => x.event) || {}).event || ""; // 날짜 공통 이벤트
 
-  const html = songs
-    .map((s) => {
-      return `
+  // 날짜 영역: 큰 일(日) + 월·요일 + 이벤트
+  const head = `
+      <div class="tw-head">
+        <span class="tw-day">${d.getDate()}</span>
+        <div class="tw-date">
+          <span class="tw-md">${monthWeek}</span>
+          ${event ? `<span class="tw-event">${esc(event)}</span>` : ""}
+        </div>
+      </div>`;
+
+  // 곡 영역: 장·조성 → 제목 → [재생 버튼 + 재생바 + 악보 보기]
+  const list = songs
+    .map(
+      (s) => `
       <div class="song">
         <div class="this-week-meta">
-          <span>${label}</span>
-          <span>${esc(s.event)}</span>
+          <span class="tw-hymn">${esc(getOptionLabel(s))}</span>
+          <span class="tw-key">${keyHTML(s.key)}</span>
         </div>
-        <div class="wrap-this-week-title">
-          <h2 class="this-week-title">${esc(s.title)}</h2>
-          <p class="key ${esc(s.key)}"></p>
+        <h2 class="this-week-title">${esc(s.title)}</h2>
+        <div class="tw-player">
+          ${playerBarHTML(s)}
+          <button class="paper" data-image="${esc(s.imageUrl)}" data-filename="" ${!s.imageUrl ? "disabled" : ""}>
+            <span alt="paper" class="paper-icon"></span>
+            <span class="paper-label">악보 보기</span>
+          </button>
         </div>
-        <div class="this-week-foot">
-          <span class="jang">${esc(s.option)}</span>
-          <div class="btns">
-            <button class="paper" data-image="${esc(s.imageUrl)}" data-filename="" ${!s.imageUrl ? "disabled" : ""}>
-              <span alt="paper" class="paper-icon"></span>
-              <span class="paper-label">악보</span>
-            </button>
-          </div>
-        </div>
-        ${playerBarHTML(s)}
         ${s.imageUrl ? `<div class="score-inline" hidden></div>` : ""}
-      </div>`;
-    })
+      </div>`,
+    )
     .join("");
+
+  const html = head + list;
 
   // 내용이 같으면 다시 그리지 않음 (데이터가 한 번 더 로딩돼도 재생바 상태가 초기화되지 않도록)
   if (html !== lastThisWeekHtml) {
@@ -421,9 +444,10 @@ function bindEvents() {
 // 오늘 날짜 표시
 function updateCurrentInfo() {
   document.getElementById("today").textContent = today.toLocaleDateString("ko-KR", {
-    year: "numeric",
+    // year: "numeric",
     month: "long",
     day: "numeric",
+    weekday: "long",
   });
 }
 
@@ -525,36 +549,37 @@ new Image().src = PAUSE_ICON; // 아이콘 전환 시 깜빡임 방지
 
 const player = new Audio(); // 한 번에 한 곡만 재생
 player.preload = "none";
+player.loop = true; // 반복 재생
 let currentKey = ""; // 재생 중이거나 일시정지된 곡의 파일명
 let currentTry = 0; // 주소 후보 중 시도 중인 순번
 const durations = {}; // 파일명 → 길이(초)
 const urlIndex = {}; // 파일명 → 실제로 열린 주소 후보 순번
 const missing = {}; // 파일명 → 음원 파일 없음
 
-// 초 → m:ss
+// 초 → mm:ss
 function fmtTime(sec) {
   if (!isFinite(sec) || sec < 0) sec = 0;
   const t = Math.floor(sec);
-  return `${Math.floor(t / 60)}:${pad(t % 60)}`;
+  return `${pad(Math.floor(t / 60))}:${pad(t % 60)}`;
 }
 
-// 이번주 영역 재생바 (진행 막대 + 경과/남은 시간 + 원형 재생 버튼)
+// 이번주 영역 재생바 (원형 재생 버튼 + 진행 막대 + 경과/남은 시간)
 function playerBarHTML(s) {
   if (!s.track) return "";
   return `
-        <div class="pbar" data-track="${esc(s.track)}">
-          <div class="pb-main">
-            <div class="pb-track" role="slider" tabindex="0" aria-label="재생 위치" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-              <span class="pb-fill"></span>
-              <span class="pb-thumb"></span>
+          <div class="pbar" data-track="${esc(s.track)}">
+            <button type="button" class="pb-toggle" aria-label="듣기">
+              <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13L19 12z"/></svg>
+              <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>
+            </button>
+            <div class="pb-main">
+              <div class="pb-track" role="slider" tabindex="0" aria-label="재생 위치" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <span class="pb-fill"></span>
+                <span class="pb-thumb"></span>
+              </div>
+              <div class="pb-times"><span class="pb-cur">00:00</span><span class="pb-rem">-00:00</span></div>
             </div>
-            <div class="pb-times"><span class="pb-cur">0:00</span><span class="pb-rem">-0:00</span></div>
-          </div>
-          <button type="button" class="pb-toggle" aria-label="듣기">
-            <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13L19 12z"/></svg>
-            <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>
-          </button>
-        </div>`;
+          </div>`;
 }
 
 // 이번주 재생바의 음원 길이/존재 여부 미리 확인 (파일이 없으면 비활성 표시)
@@ -664,6 +689,7 @@ function updateBars() {
     bar.style.setProperty("--p", `${(ratio * 100).toFixed(2)}%`);
     bar.classList.toggle("playing", playing);
     bar.classList.toggle("unavailable", !!missing[key]);
+    bar.classList.toggle("ready", !!dur); // 길이를 알면 재생 버튼 활성 색
     bar.querySelector(".pb-cur").textContent = fmtTime(cur);
     bar.querySelector(".pb-rem").textContent = `-${fmtTime(dur - cur)}`;
     bar.querySelector(".pb-track").setAttribute("aria-valuenow", Math.round(ratio * 100));
@@ -752,6 +778,9 @@ function toggleInlineScore(button, panel, imageUrl) {
   panel.hidden = !opening;
   button.classList.toggle("on", opening);
   button.setAttribute("aria-expanded", String(opening));
+
+  const label = button.querySelector(".paper-label");
+  if (label) label.textContent = opening ? "악보 접기" : "악보 보기";
 }
 
 //

@@ -58,30 +58,42 @@ a {
 }
 .top h1 {
   font-size: 22px;
-  font-weight: 700;
   letter-spacing: -0.02em;
+}
+#today {
+  font-size: 20px;
+  font-weight: 400;
+}
+.calendar {
+  width: 24px;
+  height: 24px;
+  background-image: url(../image/calendar.svg);
 }
 
 /* this-week card */
 .this-week {
-  border-radius: 24px;
+  --tw-line: #e5e8ef;
+  border-radius: 20px;
   overflow: hidden;
-  background: linear-gradient(180deg, #dce9fb, #eef4fc);
+  background: #fff;
+  border: 1px solid #d9e0f3;
   box-shadow: 0 6px 20px rgba(47, 128, 237, 0.1);
   position: relative;
 }
 .this-week-head {
-  height: 80px;
-  padding: 26px 24px 0;
-  position: relative;
+  /* D-day 알약: 카드 우측 상단 */
+  position: absolute;
+  top: 26px;
+  right: 22px;
+  z-index: 1;
 }
 .pill {
   display: inline-block;
   background: var(--blue);
   color: #fff;
-  font-size: 15px;
-  font-weight: 600;
-  padding: 8px 18px;
+  font-size: 17px;
+  font-weight: 700;
+  padding: 9px 22px;
   border-radius: 999px;
 }
 .deco {
@@ -94,8 +106,7 @@ a {
 .this-week-body {
   background: #fff;
   margin: 0;
-  border-radius: 20px;
-  padding: 26px 24px 24px;
+  padding: 22px;
   position: relative;
 }
 .this-week-meta {
@@ -103,17 +114,18 @@ a {
   justify-content: space-between;
   align-items: center;
   color: var(--sub);
-  font-size: 17px;
+  font-size: 18px;
 }
 .ev {
   color: var(--red);
   font-weight: 600;
 }
 .this-week-title {
-  font-size: 24px;
-  font-weight: 600;
+  margin-top: 10px;
+  font-size: 30px;
+  font-weight: 700;
   letter-spacing: -0.02em;
-  line-height: 1.2;
+  line-height: 1.25;
   word-break: keep-all;
 }
 .this-week-foot {
@@ -659,10 +671,11 @@ button .play-icon {
 /* 이번주 영역: 재생바 */
 .pbar {
   --p: 0%;
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-top: 18px;
+  gap: 12px;
 }
 .pb-main {
   flex: 1;
@@ -681,10 +694,11 @@ button .play-icon {
   left: 0;
   right: 0;
   top: 50%;
-  height: 2px;
+  height: 12px;
   transform: translateY(-50%);
-  border-radius: 2px;
+  border-radius: 6px;
   background: var(--ink);
+  opacity: 0.2;
 }
 .pb-fill {
   /* 재생된 구간 (굵은 선) */
@@ -692,17 +706,17 @@ button .play-icon {
   left: 0;
   top: 50%;
   width: var(--p);
-  height: 5px;
+  height: 12px;
   transform: translateY(-50%);
-  border-radius: 5px;
+  border-radius: 6px;
   background: var(--ink);
 }
 .pb-thumb {
   position: absolute;
   top: 50%;
   left: var(--p);
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   transform: translate(-50%, -50%);
   border: 3px solid var(--ink);
   border-radius: 50%;
@@ -713,22 +727,25 @@ button .play-icon {
   justify-content: space-between;
   margin-top: -2px;
   font-size: 12px;
-  color: var(--ink);
+  color: var(--sub);
   font-variant-numeric: tabular-nums;
 }
 .pb-toggle {
   flex: none;
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 48px;
-  border: 2px solid var(--ink);
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  color: var(--ink);
+  background: var(--color);
+  color: #fff;
+}
+.pbar:not(.ready) .pb-toggle {
+  background: #d9d9d9; /* 길이를 불러오기 전 / 음원 없음 */
 }
 .pb-toggle svg {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   fill: currentColor;
 }
 .pb-toggle .i-pause,
@@ -765,4 +782,67 @@ button .play-icon {
 }
 button.paper.on {
   background: rgba(74, 114, 206, 0.1);
+}
+
+/* 이번주 카드 (시안): 날짜 영역 */
+.tw-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 104px 20px 0; /* 오른쪽은 D-day 알약 자리 */
+  margin-bottom: 22px;
+  border-bottom: 1px solid var(--tw-line);
+}
+.tw-day {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  padding-right: 14px;
+  border-right: 1px solid #d9dde6;
+  font-size: 38px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color);
+}
+.tw-date {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.tw-md {
+  font-size: 16px;
+  color: var(--sub);
+}
+.tw-event {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--red);
+}
+
+/* 이번주 카드 (시안): 재생 버튼 + 재생바 + 악보 보기 */
+.tw-player {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid var(--tw-line);
+}
+.tw-player .paper {
+  flex: none;
+  margin-left: auto;
+  padding: 11px 14px;
+  border-radius: 6px;
+  font-size: 16px;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+/* 이번주 카드: 조성 (문자 + 조표 아이콘) */
+.tw-key {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--sub);
 }
